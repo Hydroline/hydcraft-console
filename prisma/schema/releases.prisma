@@ -1,0 +1,74 @@
+model ReleaseRevision {
+  id          String   @id @default(cuid())
+  kind        ReleaseKind
+  version     String
+  revision    Int
+  status      RevisionStatus @default(DRAFT)
+  manifest    Json
+  createdById String?
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([kind, version, revision])
+  @@index([kind, status, publishedAt])
+}
+
+model PublishToken {
+  id          String   @id @default(cuid())
+  name        String
+  prefix      String   @unique
+  tokenHash   String   @unique
+  scopes      ReleaseKind[]
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  lastUsedAt  DateTime?
+  createdById String?
+  createdAt   DateTime @default(now())
+}
+
+model ConsolePolicy {
+  id          String   @id @default("default")
+  edgeOne     Json?
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
+model ClientRelease {
+  id          String              @id @default(cuid())
+  channel     String
+  version     String
+  manifest    Json
+  status      ClientReleaseStatus @default(DRAFT)
+  createdById String?
+  publishedAt DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  migrationsTo   ClientMigration[] @relation("MigrationTarget")
+  migrationsFrom ClientMigration[] @relation("MigrationSource")
+
+  @@unique([channel, version])
+  @@index([channel, status, publishedAt])
+}
+
+model ClientMigration {
+  id             String              @id @default(cuid())
+  channel        String
+  fromReleaseId  String
+  toReleaseId    String
+  packageKey     String
+  packageSha256  String
+  packageSize    BigInt
+  signature      String
+  plan           Json
+  anchors        Json
+  status         ClientReleaseStatus @default(DRAFT)
+  createdById    String?
+  publishedAt    DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  fromRelease    ClientRelease       @relation("MigrationSource", fields: [fromReleaseId], references: [id], onDelete: Restrict)
+  toRelease      ClientRelease       @relation("MigrationTarget", fields: [toReleaseId], references: [id], onDelete: Restrict)
+
+  @@unique([channel, fromReleaseId, toReleaseId])
+  @@index([channel, status, fromReleaseId, publishedAt])
+}

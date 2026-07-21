@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ReleaseKind {
+  CLIENT
+  UPDATER
+}
+
+enum ClientReleaseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum RevisionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AccessMode {
+  ANY
+  ALL
+}
+
+enum AuditAction {
+  CREATED
+  UPDATED
+  PUBLISHED
+  REVOKED
+  LOGGED_OUT
+}

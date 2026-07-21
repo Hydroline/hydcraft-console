@@ -1,0 +1,50 @@
+model ConsoleSubject {
+  id           String   @id
+  hydrolineId  String   @unique
+  username     String
+  displayName  String?
+  avatarUrl    String?
+  role         String
+  locale       String   @default("zh-CN")
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  sessions     ConsoleSession[]
+  entitlements SubjectEntitlement[]
+  audits       AuditLog[] @relation("AuditActor")
+}
+
+model ConsoleSession {
+	id                         String   @id @default(cuid())
+	tokenHash                  String   @unique
+	portalAccessToken          String?
+	portalAccessTokenExpiresAt DateTime?
+	portalRefreshToken         String?
+	portalRefreshTokenExpiresAt DateTime?
+	subjectId                  String
+	subject                    ConsoleSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+	expiresAt                  DateTime
+	revokedAt                  DateTime?
+	createdAt                  DateTime @default(now())
+	@@index([subjectId, expiresAt])
+}
+
+model OidcLoginAttempt {
+  id          String   @id @default(cuid())
+  stateHash   String   @unique
+  codeVerifier String
+  returnTo    String?
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model DesktopAuthorizationCode {
+  id          String   @id @default(cuid())
+  codeHash    String   @unique
+  subjectId   String
+  redirectUri String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+}

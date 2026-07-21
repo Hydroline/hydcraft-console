@@ -1,0 +1,21 @@
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      AuditAction
+  resource    String
+  resourceId  String
+  actorId     String?
+  actor       ConsoleSubject? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  payload     Json?
+  createdAt   DateTime @default(now())
+  @@index([createdAt])
+  @@index([resource, resourceId])
+}
+
+model PostCommitEvent {
+  id          String   @id @default(cuid())
+  type        String
+  payload     Json
+  dispatchedAt DateTime?
+  createdAt   DateTime @default(now())
+  @@index([dispatchedAt, createdAt])
+}

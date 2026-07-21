@@ -1,0 +1,46 @@
+model EntitlementDefinition {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  labels      Json
+  description Json?
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  grants      SubjectEntitlement[]
+}
+
+model SubjectEntitlement {
+  subjectId     String
+  entitlementId String
+  subject       ConsoleSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  entitlement   EntitlementDefinition @relation(fields: [entitlementId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  @@id([subjectId, entitlementId])
+}
+
+model DistributionSource {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  labels      Json
+  baseUrl     String
+  priority    Int      @default(0)
+  enabled     Boolean  @default(true)
+  policy      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AddonCategory {
+  id                 String   @id @default(cuid())
+  key                String   @unique
+  labels             Json
+  description        Json?
+  installTarget      String
+  realDirectory      String?
+  entitlementMode    AccessMode @default(ANY)
+  entitlements       String[]
+  sourceIds          String[]
+  enabled            Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}

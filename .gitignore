@@ -1,0 +1,45 @@
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+tmp
+
+# Node dependencies
+node_modules
+generated
+
+# Logs
+logs
+*.log
+
+# Misc
+.DS_Store
+.fleet
+.idea
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# Editor files
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Agent files
+.claude
+.codex
+.cursor
+.windsurf
+.cline
+.roo
+.continue
+.gemini
+.aider*
