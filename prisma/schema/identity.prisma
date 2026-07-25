@@ -10,6 +10,7 @@ model ConsoleSubject {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   sessions     ConsoleSession[]
+  desktopRefreshTokens DesktopRefreshToken[]
   entitlements SubjectEntitlement[]
   audits       AuditLog[] @relation("AuditActor")
 }
@@ -47,4 +48,19 @@ model DesktopAuthorizationCode {
   expiresAt   DateTime
   consumedAt  DateTime?
   createdAt   DateTime @default(now())
+}
+
+model DesktopRefreshToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  familyId  String
+  subjectId String
+  subject   ConsoleSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  lastUsedAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([familyId])
+  @@index([subjectId, expiresAt])
 }

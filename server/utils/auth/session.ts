@@ -38,7 +38,21 @@ export interface ConsoleIdentity {
 	entitlements: string[]
 }
 
-const hashToken = (value: string) =>
+const sourceAccessRoleRank: Record<string, number> = {
+	USER: 0,
+	MEMBER: 1,
+	ADMIN: 2,
+	OWNER: 3,
+}
+
+export const canUseProtectedSource = (
+	identity: Pick<ConsoleIdentity, 'role'> | null | undefined,
+) =>
+	Boolean(identity) &&
+	(sourceAccessRoleRank[String(identity?.role).toUpperCase()] ?? -1) >=
+		sourceAccessRoleRank.MEMBER
+
+export const hashToken = (value: string) =>
 	createHash('sha256').update(value).digest('hex')
 
 const encryptionKey = () =>

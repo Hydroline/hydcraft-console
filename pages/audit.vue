@@ -59,10 +59,10 @@ const formatDate = (value: string): string =>
 					</UBadge>
 				</template>
 				<template #resource-cell="{ row }">
-					<span class="font-mono text-xs">{{ row.original.resource }}</span>
+					<span class="text-xs">{{ row.original.resource }}</span>
 				</template>
 				<template #resourceId-cell="{ row }">
-					<span class="font-mono text-xs">{{ row.original.resourceId }}</span>
+					<span class="text-xs">{{ row.original.resourceId }}</span>
 				</template>
 				<template #actor-cell="{ row }">
 					{{ row.original.actor?.username || t('audit.system') }}

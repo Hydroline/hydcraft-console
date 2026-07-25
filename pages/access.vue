@@ -144,7 +144,7 @@ const save = async () => {
 					</button>
 				</template>
 				<template #hydrolineId-cell="{ row }">
-					<span class="font-mono text-xs">{{ row.original.hydrolineId }}</span>
+					<span class="text-xs">{{ row.original.hydrolineId }}</span>
 				</template>
 				<template #role-cell="{ row }">
 					<UBadge color="neutral" variant="subtle">{{

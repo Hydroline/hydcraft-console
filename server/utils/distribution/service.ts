@@ -97,7 +97,14 @@ export const saveDistribution = async (
 					: publicSourcePolicy()
 			const source = await tx.distributionSource.upsert({
 				where: { key: input.key },
-				create: { ...input, policy },
+				create: {
+					key: input.key,
+					labels: input.labels,
+					baseUrl: input.baseUrl,
+					priority: input.priority,
+					enabled: input.enabled,
+					policy,
+				},
 				update: {
 					labels: input.labels,
 					baseUrl: input.baseUrl,
@@ -116,7 +123,12 @@ export const saveDistribution = async (
 		if (input.type === 'entitlement') {
 			const entitlement = await tx.entitlementDefinition.upsert({
 				where: { key: input.key },
-				create: input,
+				create: {
+					key: input.key,
+					labels: input.labels,
+					description: input.description,
+					enabled: input.enabled,
+				},
 				update: {
 					labels: input.labels,
 					description: input.description,
@@ -144,7 +156,17 @@ export const saveDistribution = async (
 			throw createApiError(400, 'SOURCE_REFERENCE_INVALID')
 		const category = await tx.addonCategory.upsert({
 			where: { key: input.key },
-			create: input,
+			create: {
+				key: input.key,
+				labels: input.labels,
+				description: input.description,
+				installTarget: input.installTarget,
+				realDirectory: input.realDirectory,
+				entitlementMode: input.entitlementMode,
+				entitlements: input.entitlements,
+				sourceIds: input.sourceIds,
+				enabled: input.enabled,
+			},
 			update: {
 				labels: input.labels,
 				description: input.description,

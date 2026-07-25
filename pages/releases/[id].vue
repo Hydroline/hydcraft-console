@@ -113,7 +113,7 @@ const rollback = async () => {
 					v-model="rawManifest"
 					:disabled="release.status !== 'DRAFT'"
 					:rows="28"
-					class="w-full font-mono text-xs"
+					class="w-full text-xs"
 				/>
 			</UFormField>
 			<UFormField :label="t('release.diffPreview')">

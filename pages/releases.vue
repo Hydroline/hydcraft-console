@@ -14,6 +14,12 @@ interface Migration {
 	fromRelease: { version: string }
 	toRelease: { version: string }
 }
+interface ClientRelease {
+	id: string
+	version: string
+	status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+	manifest: Record<string, unknown>
+}
 
 const { t } = useI18n()
 const toast = useToast()
@@ -25,7 +31,10 @@ const {
 const { data: migrations, refresh: refreshMigrations } = await useFetch<
 	Migration[]
 >('/api/admin/migrations')
-const selectedKind = ref<'MIGRATION' | 'UPDATER'>('MIGRATION')
+const { data: clientReleases, refresh: refreshClientReleases } = await useFetch<
+	ClientRelease[]
+>('/api/admin/client-releases')
+const selectedKind = ref<'MIGRATION' | 'CLIENT' | 'UPDATER'>('MIGRATION')
 const open = ref(false)
 const advanced = ref(false)
 const version = ref('')
@@ -38,7 +47,9 @@ const pageSize = ref(20)
 const rows = computed(() =>
 	selectedKind.value === 'MIGRATION'
 		? (migrations.value ?? [])
-		: updaterReleases.value,
+		: selectedKind.value === 'CLIENT'
+			? (clientReleases.value ?? [])
+			: updaterReleases.value,
 )
 const pageCount = computed(() =>
 	Math.max(1, Math.ceil(rows.value.length / pageSize.value)),
@@ -58,12 +69,18 @@ const columns = computed(() =>
 				{ accessorKey: 'status', header: t('release.status') },
 				{ id: 'actions', header: '' },
 			]
-		: [
-				{ accessorKey: 'version', header: t('release.version') },
-				{ accessorKey: 'revision', header: t('release.revision') },
-				{ accessorKey: 'status', header: t('release.status') },
-				{ id: 'actions', header: '' },
-			],
+		: selectedKind.value === 'CLIENT'
+			? [
+					{ accessorKey: 'version', header: t('release.version') },
+					{ accessorKey: 'status', header: t('release.status') },
+					{ id: 'actions', header: '' },
+				]
+			: [
+					{ accessorKey: 'version', header: t('release.version') },
+					{ accessorKey: 'revision', header: t('release.revision') },
+					{ accessorKey: 'status', header: t('release.status') },
+					{ id: 'actions', header: '' },
+				],
 )
 watch(selectedKind, () => {
 	page.value = 1
@@ -95,10 +112,16 @@ const publish = async (id: string) => {
 		const endpoint =
 			selectedKind.value === 'MIGRATION'
 				? `/api/admin/migrations/${id}/publish`
-				: `/api/admin/releases/${id}/publish`
+				: selectedKind.value === 'CLIENT'
+					? `/api/admin/client-releases/${id}/publish`
+					: `/api/admin/releases/${id}/publish`
 		await $fetch(endpoint, { method: 'POST' })
 		toast.add({ title: t('release.published'), color: 'success' })
-		await Promise.all([refreshReleases(), refreshMigrations()])
+		await Promise.all([
+			refreshReleases(),
+			refreshMigrations(),
+			refreshClientReleases(),
+		])
 	} catch {
 		toast.add({ title: t('errors.requestFailed'), color: 'error' })
 	}
@@ -136,6 +159,11 @@ const publish = async (id: string) => {
 				>{{ t('release.migrations') }}</UButton
 			><UButton
 				color="primary"
+				:variant="selectedKind === 'CLIENT' ? 'solid' : 'soft'"
+				@click="selectedKind = 'CLIENT'"
+				>{{ t('release.client') }}</UButton
+			><UButton
+				color="primary"
 				:variant="selectedKind === 'UPDATER' ? 'solid' : 'soft'"
 				@click="selectedKind = 'UPDATER'"
 				>{{ t('release.updater') }}</UButton
@@ -150,19 +178,15 @@ const publish = async (id: string) => {
 				:loading="status === 'pending'"
 				class="min-h-72 min-w-full"
 				><template #fromRelease-cell="{ row }"
-					><span class="font-mono">{{
+					><span class="">{{
 						row.original.fromRelease.version
 					}}</span></template
 				><template #toRelease-cell="{ row }"
-					><span class="font-mono">{{
-						row.original.toRelease.version
-					}}</span></template
+					><span class="">{{ row.original.toRelease.version }}</span></template
 				><template #packageKey-cell="{ row }"
-					><span class="font-mono text-xs">{{
-						row.original.packageKey
-					}}</span></template
+					><span class="text-xs">{{ row.original.packageKey }}</span></template
 				><template #version-cell="{ row }"
-					><span class="font-mono">{{ row.original.version }}</span></template
+					><span class="">{{ row.original.version }}</span></template
 				><template #revision-cell="{ row }"
 					>#{{ row.original.revision }}</template
 				><template #status-cell="{ row }"
@@ -213,10 +237,7 @@ const publish = async (id: string) => {
 						v-model="advanced"
 						:label="t('release.advancedJson')"
 					/><UFormField v-if="advanced" :label="t('release.manifestJson')"
-						><UTextarea
-							v-model="rawManifest"
-							:rows="12"
-							class="w-full font-mono"
+						><UTextarea v-model="rawManifest" :rows="12" class="w-full"
 					/></UFormField>
 					<p class="text-sm text-slate-500 dark:text-slate-400">
 						{{ t('release.updaterDraftHint') }}

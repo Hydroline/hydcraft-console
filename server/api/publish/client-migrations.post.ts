@@ -23,5 +23,5 @@ export default defineEventHandler(async (event) => {
 		where: { id: credential.id },
 		data: { lastUsedAt: new Date() },
 	})
-	return migration
+	return { ...migration, packageSize: Number(migration.packageSize) }
 })

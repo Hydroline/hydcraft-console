@@ -3,13 +3,8 @@ import { prisma } from '../../utils/db/prisma'
 
 export default defineEventHandler(async (event) => {
 	await requireAdministrator(event)
-	const migrations = await prisma.clientMigration.findMany({
-		include: { fromRelease: true, toRelease: true },
+	return prisma.clientRelease.findMany({
 		orderBy: { updatedAt: 'desc' },
 		take: 100,
 	})
-	return migrations.map((migration) => ({
-		...migration,
-		packageSize: Number(migration.packageSize),
-	}))
 })

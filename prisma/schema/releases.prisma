@@ -35,7 +35,6 @@ model ConsolePolicy {
 
 model ClientRelease {
   id          String              @id @default(cuid())
-  channel     String
   version     String
   manifest    Json
   status      ClientReleaseStatus @default(DRAFT)
@@ -46,13 +45,12 @@ model ClientRelease {
   migrationsTo   ClientMigration[] @relation("MigrationTarget")
   migrationsFrom ClientMigration[] @relation("MigrationSource")
 
-  @@unique([channel, version])
-  @@index([channel, status, publishedAt])
+  @@unique([version])
+  @@index([status, publishedAt])
 }
 
 model ClientMigration {
   id             String              @id @default(cuid())
-  channel        String
   fromReleaseId  String
   toReleaseId    String
   packageKey     String
@@ -69,6 +67,6 @@ model ClientMigration {
   fromRelease    ClientRelease       @relation("MigrationSource", fields: [fromReleaseId], references: [id], onDelete: Restrict)
   toRelease      ClientRelease       @relation("MigrationTarget", fields: [toReleaseId], references: [id], onDelete: Restrict)
 
-  @@unique([channel, fromReleaseId, toReleaseId])
-  @@index([channel, status, fromReleaseId, publishedAt])
+  @@unique([fromReleaseId, toReleaseId])
+  @@index([status, fromReleaseId, publishedAt])
 }

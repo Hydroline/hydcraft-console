@@ -1,20 +1,24 @@
 import { z } from 'zod'
 import { nextClientMigration } from '../../../utils/client-updates/service'
-import { optionalIdentity } from '../../../utils/auth/session'
+import {
+	canUseProtectedSource,
+	optionalIdentity,
+} from '../../../utils/auth/session'
 
 const query = z.object({
-	currentVersion: z.string().regex(/^\d+\.\d+\.\d+\.\d+$/),
-	channel: z
+	currentVersion: z.string().regex(/^\d+\.\d+\.\d+(?:\.\d+)?$/),
+	sourceKey: z
 		.string()
 		.regex(/^[a-z0-9-]+$/)
-		.default('stable'),
+		.optional(),
 })
 
 export default defineEventHandler(async (event) => {
 	const input = query.parse(getQuery(event))
+	const identity = await optionalIdentity(event)
 	return nextClientMigration(
-		input.channel,
 		input.currentVersion,
-		Boolean(await optionalIdentity(event)),
+		canUseProtectedSource(identity),
+		input.sourceKey,
 	)
 })

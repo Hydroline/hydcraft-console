@@ -344,7 +344,7 @@ const setPageSize = (value: number): void => {
 					{{ row.original.labels['zh-CN'] || row.original.key }}
 				</template>
 				<template #baseUrl-cell="{ row }">
-					<span class="font-mono text-xs">{{ row.original.baseUrl }}</span>
+					<span class="text-xs">{{ row.original.baseUrl }}</span>
 				</template>
 				<template #status-cell="{ row }">
 					<UBadge
@@ -401,9 +401,7 @@ const setPageSize = (value: number): void => {
 						{{ row.original.labels['zh-CN'] || row.original.key }}
 					</template>
 					<template #installTarget-cell="{ row }">
-						<span class="font-mono text-xs">{{
-							row.original.installTarget
-						}}</span>
+						<span class="text-xs">{{ row.original.installTarget }}</span>
 					</template>
 					<template #entitlements-cell="{ row }">
 						{{

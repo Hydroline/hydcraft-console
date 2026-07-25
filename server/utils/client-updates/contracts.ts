@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-const version = z.string().regex(/^\d+\.\d+\.\d+\.\d+$/)
+const version = z.string().regex(/^\d+\.\d+\.\d+(?:\.\d+)?$/)
 const sha256 = z.string().regex(/^[a-f0-9]{64}$/i)
 const safePath = z
 	.string()
@@ -13,25 +13,42 @@ const safePath = z
 			!value.split('/').includes('..'),
 		'UPDATE_PATH_INVALID',
 	)
+const basePackage = z.object({
+	packageKey: safePath,
+	packageSha256: sha256,
+	packageSize: z.number().int().positive(),
+	signature: z.string().min(32),
+	signaturePayload: z.literal('sha256').optional(),
+	sources: z.array(z.string().url()).min(1),
+})
+
+const clientModSchema = z.object({
+	id: z.string().min(1).max(256),
+	name: z.string().min(1).max(256),
+	version: z.string().min(1).max(256),
+	description: z.string().max(4000).optional(),
+	api: z.string().max(256).optional(),
+})
+
+const clientMetadataSchema = z.object({
+	apiVersion: z.string().min(1).max(256),
+	mods: z.array(clientModSchema).max(5000),
+})
 
 export const clientReleaseSchema = z.object({
-	channel: z
-		.string()
-		.regex(/^[a-z0-9-]+$/)
-		.default('stable'),
 	version,
 	manifest: z.object({
 		clientId: z.string().min(1),
 		managedRoots: z.array(safePath).min(1),
 		description: z.string().max(4000).optional(),
+		readme: z.string().max(20000).optional(),
+		changelog: z.string().max(20000).optional(),
+		metadata: clientMetadataSchema.optional(),
+		base: basePackage.optional(),
 	}),
 })
 
 export const clientMigrationSchema = z.object({
-	channel: z
-		.string()
-		.regex(/^[a-z0-9-]+$/)
-		.default('stable'),
 	fromVersion: version,
 	toVersion: version,
 	packageKey: safePath,
