@@ -24,6 +24,7 @@ model DistributionSource {
   labels      Json
   baseUrl     String
   priority    Int      @default(0)
+  isDefault   Boolean  @default(false)
   enabled     Boolean  @default(true)
   policy      Json?
   createdAt   DateTime @default(now())

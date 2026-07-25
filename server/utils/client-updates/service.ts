@@ -3,7 +3,12 @@ import { prisma } from '../db/prisma'
 import { createApiError } from '../errors'
 import { enqueuePostCommitEvent } from '../events/post-commit'
 import { resolveDeliveryUrl, sourceDelivery } from '../delivery/edgeone'
-import type { ClientMigrationInput, ClientReleaseInput } from './contracts'
+import type {
+	ClientMigrationInput,
+	ClientReleaseEditorialInput,
+	ClientReleaseInput,
+} from './contracts'
+import type { PortalDirectoryUser } from '../portal/directory'
 
 type LocalizedLabels = Record<string, unknown>
 
@@ -11,11 +16,34 @@ export interface UpdaterVersion {
 	version: string
 	label: string
 	isLatest: boolean
+	isBase: boolean
 	publishedAt: string | null
 	changelog: string | null
 	apiVersion: string | null
 	modCount: number
 	mods: UpdaterMod[]
+	publisher: UpdaterContributor | null
+	contributors: UpdaterContributor[]
+	fullPackage: UpdaterFullPackage | null
+}
+
+export interface UpdaterContributor {
+	hydrolineId: string
+	username: string
+	displayName: string | null
+	avatarUrl: string | null
+}
+
+export interface UpdaterFullPackage {
+	packageKey: string
+	packageSha256: string
+	packageSize: number
+	signature: string
+	signaturePayload?: 'sha256'
+}
+
+export interface UpdaterFullPackageDownload extends UpdaterFullPackage {
+	sources: string[]
 }
 
 export interface UpdaterMod {
@@ -29,7 +57,9 @@ export interface UpdaterMod {
 export interface UpdaterSource {
 	key: string
 	label: string
+	baseUrl: string
 	priority: number
+	isDefault: boolean
 	requiresLogin: boolean
 	available: boolean
 }
@@ -61,6 +91,61 @@ const withMigrationAnchors = (plan: unknown, anchors: unknown) =>
 	plan && typeof plan === 'object' && !Array.isArray(plan)
 		? { ...(plan as Record<string, unknown>), anchors }
 		: plan
+
+const contributorFromManifest = (value: unknown): UpdaterContributor | null => {
+	if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+	const item = value as Record<string, unknown>
+	if (typeof item.hydrolineId !== 'string' || typeof item.username !== 'string')
+		return null
+	return {
+		hydrolineId: item.hydrolineId,
+		username: item.username,
+		displayName: typeof item.displayName === 'string' ? item.displayName : null,
+		avatarUrl: typeof item.avatarUrl === 'string' ? item.avatarUrl : null,
+	}
+}
+
+const contributorsFromManifest = (value: unknown) =>
+	Array.isArray(value)
+		? value
+				.map(contributorFromManifest)
+				.filter((item): item is UpdaterContributor => Boolean(item))
+		: []
+
+const fullPackageFromManifest = (
+	manifest: Record<string, unknown>,
+	version: string,
+) => {
+	const base = manifest.base
+	const baseMatchesRelease =
+		base &&
+		typeof base === 'object' &&
+		!Array.isArray(base) &&
+		typeof (base as Record<string, unknown>).packageKey === 'string' &&
+		(base as Record<string, unknown>).packageKey.startsWith(
+			`client/stable/base/${version}/`,
+		)
+	const candidate = manifest.fullPackage ?? (baseMatchesRelease ? base : null)
+	if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate))
+		return null
+	const item = candidate as Record<string, unknown>
+	if (
+		typeof item.packageKey !== 'string' ||
+		typeof item.packageSha256 !== 'string' ||
+		typeof item.packageSize !== 'number' ||
+		typeof item.signature !== 'string'
+	)
+		return null
+	return {
+		packageKey: item.packageKey,
+		packageSha256: item.packageSha256,
+		packageSize: item.packageSize,
+		signature: item.signature,
+		...(item.signaturePayload === 'sha256'
+			? { signaturePayload: 'sha256' as const }
+			: {}),
+	}
+}
 
 const nextMigrationRecord = async (currentVersion: string) => {
 	const fromRelease = await prisma.clientRelease.findFirst({
@@ -100,6 +185,10 @@ export const listClientVersions = async (): Promise<UpdaterVersion[]> => {
 			version: release.version,
 			label: release.version,
 			isLatest: release.version === latest,
+			isBase: Boolean(
+				fullPackageFromManifest(manifest, release.version) &&
+				!manifest.fullPackage,
+			),
 			publishedAt: release.publishedAt?.toISOString() ?? null,
 			changelog:
 				typeof manifest.changelog === 'string' ? manifest.changelog : null,
@@ -107,6 +196,9 @@ export const listClientVersions = async (): Promise<UpdaterVersion[]> => {
 				typeof metadata.apiVersion === 'string' ? metadata.apiVersion : null,
 			modCount: mods.length,
 			mods,
+			publisher: contributorFromManifest(manifest.publisher),
+			contributors: contributorsFromManifest(manifest.contributors),
+			fullPackage: fullPackageFromManifest(manifest, release.version),
 		}
 	})
 }
@@ -118,14 +210,23 @@ export const listUpdaterSources = async (
 	const sources = await prisma.distributionSource.findMany({
 		where: { enabled: true },
 		orderBy: { priority: 'asc' },
-		select: { key: true, labels: true, priority: true, policy: true },
+		select: {
+			key: true,
+			labels: true,
+			baseUrl: true,
+			priority: true,
+			isDefault: true,
+			policy: true,
+		},
 	})
 	return sources.map((source) => {
 		const requiresLogin = sourceDelivery(source.policy) === 'edgeone'
 		return {
 			key: source.key,
 			label: localizedLabel(source.labels, locale) || source.key,
+			baseUrl: source.baseUrl,
 			priority: source.priority,
+			isDefault: source.isDefault,
 			requiresLogin,
 			available: !requiresLogin || canUseProtectedSource,
 		}
@@ -190,6 +291,56 @@ export const createClientRelease = async (
 		return release
 	})
 
+const toManifestContributor = (
+	user: PortalDirectoryUser,
+): UpdaterContributor => ({
+	hydrolineId: user.hydrolineId,
+	username: user.username,
+	displayName: user.displayName,
+	avatarUrl: user.avatarUrl,
+})
+
+export const updateClientReleaseEditorial = async (
+	id: string,
+	input: ClientReleaseEditorialInput,
+	people: PortalDirectoryUser[],
+	actorId: string,
+) =>
+	prisma.$transaction(async (tx) => {
+		const release = await tx.clientRelease.findUnique({ where: { id } })
+		if (!release) throw createApiError(404, 'CLIENT_RELEASE_NOT_FOUND')
+		const manifest =
+			release.manifest && typeof release.manifest === 'object'
+				? { ...(release.manifest as Record<string, unknown>) }
+				: {}
+		const peopleById = new Map(
+			people.map((person) => [
+				person.hydrolineId,
+				toManifestContributor(person),
+			]),
+		)
+		if (input.changelog !== undefined) manifest.changelog = input.changelog
+		if (input.publisherHydrolineId !== undefined)
+			manifest.publisher = input.publisherHydrolineId
+				? (peopleById.get(input.publisherHydrolineId) ?? null)
+				: null
+		if (input.contributorHydrolineIds !== undefined)
+			manifest.contributors = input.contributorHydrolineIds.map((hydrolineId) =>
+				peopleById.get(hydrolineId)!,
+			)
+		const updated = await tx.clientRelease.update({
+			where: { id },
+			data: { manifest },
+		})
+		await enqueuePostCommitEvent(tx, 'audit.log', {
+			action: 'UPDATED',
+			resource: 'client-release',
+			resourceId: id,
+			actorId,
+		})
+		return updated
+	})
+
 export const getPublishedClientBase = async (clientId: string) => {
 	const releases = await prisma.clientRelease.findMany({
 		where: { status: 'PUBLISHED' },
@@ -207,6 +358,61 @@ export const getPublishedClientBase = async (clientId: string) => {
 		}
 	}
 	throw createApiError(404, 'PUBLISHED_CLIENT_BASE_NOT_FOUND')
+}
+
+const resolvePackageSources = async (
+	packageKey: string,
+	canUseProtectedSource: boolean,
+	sourceKey?: string,
+) => {
+	const sources = await prisma.distributionSource.findMany({
+		where: { enabled: true },
+		orderBy: { priority: 'asc' },
+		select: { key: true, baseUrl: true, policy: true },
+	})
+	const orderedSources = sourceKey
+		? [
+				...sources.filter((source) => source.key === sourceKey),
+				...sources.filter((source) => source.key !== sourceKey),
+			]
+		: sources
+	const packageUrls = orderedSources.flatMap((source) =>
+		sourceDelivery(source.policy) === 'edgeone'
+			? canUseProtectedSource
+				? [resolveDeliveryUrl(source.baseUrl, packageKey, source.policy)]
+				: []
+			: [`${source.baseUrl.replace(/\/$/, '')}/${packageKey}`],
+	)
+	if (!packageUrls.length)
+		throw createApiError(401, 'PROTECTED_SOURCE_AUTHENTICATION_REQUIRED')
+	return packageUrls
+}
+
+export const getPublishedClientFullPackage = async (
+	version: string,
+	canUseProtectedSource: boolean,
+	sourceKey?: string,
+): Promise<UpdaterFullPackageDownload> => {
+	const release = await prisma.clientRelease.findFirst({
+		where: { version, status: 'PUBLISHED' },
+		select: { manifest: true, version: true },
+	})
+	if (!release) throw createApiError(404, 'CLIENT_RELEASE_NOT_FOUND')
+	const manifest =
+		release.manifest && typeof release.manifest === 'object'
+			? (release.manifest as Record<string, unknown>)
+			: {}
+	const fullPackage = fullPackageFromManifest(manifest, release.version)
+	if (!fullPackage)
+		throw createApiError(404, 'PUBLISHED_CLIENT_FULL_PACKAGE_NOT_FOUND')
+	return {
+		...fullPackage,
+		sources: await resolvePackageSources(
+			fullPackage.packageKey,
+			canUseProtectedSource,
+			sourceKey,
+		),
+	}
 }
 
 export const publishClientRelease = async (id: string, actorId: string) =>
@@ -311,32 +517,11 @@ export const nextClientMigration = async (
 ) => {
 	const migration = await nextMigrationRecord(currentVersion)
 	if (!migration) return null
-	const sources = await prisma.distributionSource.findMany({
-		where: { enabled: true },
-		orderBy: { priority: 'asc' },
-		select: { key: true, baseUrl: true, policy: true },
-	})
-	const orderedSources = sourceKey
-		? [
-				...sources.filter((source) => source.key === sourceKey),
-				...sources.filter((source) => source.key !== sourceKey),
-			]
-		: sources
-	const packageUrls = orderedSources.flatMap((source) =>
-		sourceDelivery(source.policy) === 'edgeone'
-			? canUseProtectedSource
-				? [
-						resolveDeliveryUrl(
-							source.baseUrl,
-							migration.packageKey,
-							source.policy,
-						),
-					]
-				: []
-			: [`${source.baseUrl.replace(/\/$/, '')}/${migration.packageKey}`],
+	const packageUrls = await resolvePackageSources(
+		migration.packageKey,
+		canUseProtectedSource,
+		sourceKey,
 	)
-	if (!packageUrls.length)
-		throw createApiError(401, 'PROTECTED_SOURCE_AUTHENTICATION_REQUIRED')
 	return {
 		migrationId: migration.id,
 		fromVersion: currentVersion,

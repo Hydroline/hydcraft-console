@@ -77,10 +77,22 @@
 		"diffPreview": "规范化预览",
 		"saveDraft": "保存草稿",
 		"draftCreated": "草稿已创建",
-		"published": "已原子发布"
+		"published": "已原子发布",
+		"editClient": "编辑客户端信息",
+		"changelog": "更新日志",
+		"publisher": "发包人",
+		"contributors": "贡献者",
+		"noPublisher": "尚未指派",
+		"contributorCount": "已选择 {count} 位贡献者",
+		"peopleSearchPlaceholder": "搜索 Portal Hydroline ID 或用户名",
+		"assignPublisher": "设为发包人",
+		"assignContributor": "切换贡献者",
+		"clearPublisher": "清空发包人",
+		"removeContributor": "移除贡献者"
 	},
 	"status": { "DRAFT": "草稿", "PUBLISHED": "已发布", "ARCHIVED": "已归档" },
 	"distribution": {
+		"defaultSource": "默认下载源",
 		"eyebrow": "Distribution topology",
 		"title": "分发",
 		"sources": "来源",

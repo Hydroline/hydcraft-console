@@ -20,6 +20,23 @@ interface ClientRelease {
 	status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
 	manifest: Record<string, unknown>
 }
+interface DirectoryUser {
+	id: string
+	hydrolineId: string
+	username: string
+	displayName: string | null
+	avatarUrl: string | null
+	role: string
+}
+interface DirectoryUsersResponse {
+	items: DirectoryUser[]
+}
+interface ManifestContributor {
+	hydrolineId: string
+	username: string
+	displayName: string | null
+	avatarUrl: string | null
+}
 
 const { t } = useI18n()
 const toast = useToast()
@@ -36,9 +53,19 @@ const { data: clientReleases, refresh: refreshClientReleases } = await useFetch<
 >('/api/admin/client-releases')
 const selectedKind = ref<'MIGRATION' | 'CLIENT' | 'UPDATER'>('MIGRATION')
 const open = ref(false)
+const clientEditorOpen = ref(false)
+const editingClientRelease = ref<ClientRelease | null>(null)
 const advanced = ref(false)
 const version = ref('')
 const rawManifest = ref('{\n  "schemaVersion": 1\n}')
+const clientChangelog = ref('')
+const publisherHydrolineId = ref<string | null>(null)
+const contributorHydrolineIds = ref<string[]>([])
+const publisher = ref<ManifestContributor | null>(null)
+const contributors = ref<ManifestContributor[]>([])
+const directoryQuery = ref('')
+const directoryResults = ref<DirectoryUser[]>([])
+const directoryLoading = ref(false)
 const updaterReleases = computed(() =>
 	(releases.value ?? []).filter((release) => release.kind === 'UPDATER'),
 )
@@ -126,6 +153,110 @@ const publish = async (id: string) => {
 		toast.add({ title: t('errors.requestFailed'), color: 'error' })
 	}
 }
+const asContributor = (value: unknown): ManifestContributor | null => {
+	if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+	const item = value as Record<string, unknown>
+	return typeof item.hydrolineId === 'string' &&
+		typeof item.username === 'string'
+		? {
+				hydrolineId: item.hydrolineId,
+				username: item.username,
+				displayName:
+					typeof item.displayName === 'string' ? item.displayName : null,
+				avatarUrl: typeof item.avatarUrl === 'string' ? item.avatarUrl : null,
+			}
+		: null
+}
+const openClientEditor = (release: ClientRelease) => {
+	editingClientRelease.value = release
+	clientChangelog.value =
+		typeof release.manifest.changelog === 'string'
+			? release.manifest.changelog
+			: ''
+	publisher.value = asContributor(release.manifest.publisher)
+	publisherHydrolineId.value = publisher.value?.hydrolineId ?? null
+	contributors.value = Array.isArray(release.manifest.contributors)
+		? release.manifest.contributors
+				.map(asContributor)
+				.filter((item): item is ManifestContributor => Boolean(item))
+		: []
+	contributorHydrolineIds.value = contributors.value.map(
+		(item) => item.hydrolineId,
+	)
+	directoryQuery.value = ''
+	directoryResults.value = []
+	clientEditorOpen.value = true
+}
+const searchDirectory = async () => {
+	if (!directoryQuery.value.trim()) {
+		directoryResults.value = []
+		return
+	}
+	directoryLoading.value = true
+	try {
+		const response = await $fetch<DirectoryUsersResponse>('/api/admin/users', {
+			query: { q: directoryQuery.value, page: 1, pageSize: 20 },
+		})
+		directoryResults.value = response.items
+	} catch {
+		directoryResults.value = []
+		toast.add({ title: t('errors.requestFailed'), color: 'error' })
+	} finally {
+		directoryLoading.value = false
+	}
+}
+const toManifestContributor = (user: DirectoryUser): ManifestContributor => ({
+	hydrolineId: user.hydrolineId,
+	username: user.username,
+	displayName: user.displayName,
+	avatarUrl: user.avatarUrl,
+})
+const selectPublisher = (user: DirectoryUser) => {
+	publisherHydrolineId.value = user.hydrolineId
+	publisher.value = toManifestContributor(user)
+}
+const clearPublisher = () => {
+	publisherHydrolineId.value = null
+	publisher.value = null
+}
+const toggleContributor = (user: DirectoryUser) => {
+	const exists = contributorHydrolineIds.value.includes(user.hydrolineId)
+	contributorHydrolineIds.value = exists
+		? contributorHydrolineIds.value.filter((id) => id !== user.hydrolineId)
+		: [...contributorHydrolineIds.value, user.hydrolineId]
+	contributors.value = exists
+		? contributors.value.filter((item) => item.hydrolineId !== user.hydrolineId)
+		: [...contributors.value, toManifestContributor(user)]
+}
+const removeContributor = (hydrolineId: string) => {
+	contributorHydrolineIds.value = contributorHydrolineIds.value.filter(
+		(id) => id !== hydrolineId,
+	)
+	contributors.value = contributors.value.filter(
+		(item) => item.hydrolineId !== hydrolineId,
+	)
+}
+const saveClientEditorial = async () => {
+	if (!editingClientRelease.value) return
+	try {
+		await $fetch(
+			`/api/admin/client-releases/${editingClientRelease.value.id}`,
+			{
+				method: 'PATCH',
+				body: {
+					changelog: clientChangelog.value,
+					publisherHydrolineId: publisherHydrolineId.value,
+					contributorHydrolineIds: contributorHydrolineIds.value,
+				},
+			},
+		)
+		clientEditorOpen.value = false
+		toast.add({ title: t('release.saved'), color: 'success' })
+		await refreshClientReleases()
+	} catch {
+		toast.add({ title: t('errors.requestFailed'), color: 'error' })
+	}
+}
 </script>
 
 <template>
@@ -204,6 +335,14 @@ const publish = async (id: string) => {
 				><template #actions-cell="{ row }"
 					><div class="flex justify-end gap-2">
 						<UButton
+							v-if="selectedKind === 'CLIENT'"
+							size="xs"
+							color="neutral"
+							variant="soft"
+							@click="openClientEditor(row.original)"
+							>{{ t('release.editClient') }}</UButton
+						>
+						<UButton
 							v-if="selectedKind === 'UPDATER'"
 							size="xs"
 							color="neutral"
@@ -253,5 +392,147 @@ const publish = async (id: string) => {
 				</div></template
 			></UModal
 		>
+		<UModal v-model:open="clientEditorOpen" :title="t('release.editClient')">
+			<template #body>
+				<div class="space-y-5">
+					<UFormField :label="t('release.changelog')">
+						<UTextarea v-model="clientChangelog" :rows="10" class="w-full" />
+					</UFormField>
+					<div class="grid gap-4 sm:grid-cols-2">
+						<UFormField :label="t('release.publisher')">
+							<div
+								v-if="publisher"
+								class="flex items-center gap-3 rounded-lg border border-slate-200 p-2 dark:border-slate-800"
+							>
+								<UAvatar
+									:src="publisher.avatarUrl || undefined"
+									:alt="publisher.username"
+								/>
+								<div class="min-w-0 flex-1">
+									<p class="truncate text-sm font-medium">
+										{{ publisher.displayName || publisher.username }}
+									</p>
+									<p
+										class="truncate text-xs text-slate-500 dark:text-slate-400"
+									>
+										{{ publisher.hydrolineId }}
+									</p>
+								</div>
+								<UTooltip :text="t('release.clearPublisher')">
+									<UButton
+										icon="i-lucide-x"
+										color="neutral"
+										variant="ghost"
+										@click="clearPublisher"
+									/>
+								</UTooltip>
+							</div>
+							<p v-else class="text-sm text-slate-500 dark:text-slate-400">
+								{{ t('release.noPublisher') }}
+							</p>
+						</UFormField>
+						<UFormField :label="t('release.contributors')">
+							<div class="space-y-2">
+								<div
+									v-for="person in contributors"
+									:key="person.hydrolineId"
+									class="flex items-center gap-3 rounded-lg border border-slate-200 p-2 dark:border-slate-800"
+								>
+									<UAvatar
+										:src="person.avatarUrl || undefined"
+										:alt="person.username"
+									/>
+									<div class="min-w-0 flex-1">
+										<p class="truncate text-sm font-medium">
+											{{ person.displayName || person.username }}
+										</p>
+										<p
+											class="truncate text-xs text-slate-500 dark:text-slate-400"
+										>
+											{{ person.hydrolineId }}
+										</p>
+									</div>
+									<UTooltip :text="t('release.removeContributor')">
+										<UButton
+											icon="i-lucide-x"
+											color="neutral"
+											variant="ghost"
+											@click="removeContributor(person.hydrolineId)"
+										/>
+									</UTooltip>
+								</div>
+							</div>
+						</UFormField>
+					</div>
+					<div class="space-y-2">
+						<form class="flex gap-2" @submit.prevent="searchDirectory">
+							<UInput
+								v-model="directoryQuery"
+								class="flex-1"
+								:placeholder="t('release.peopleSearchPlaceholder')"
+							/>
+							<UButton
+								type="submit"
+								icon="i-lucide-search"
+								:loading="directoryLoading"
+								>{{ t('actions.search') }}</UButton
+							>
+						</form>
+						<div
+							v-for="user in directoryResults"
+							:key="user.id"
+							class="flex items-center gap-3 rounded-lg border border-slate-200 p-2 dark:border-slate-800"
+						>
+							<UAvatar
+								:src="user.avatarUrl || undefined"
+								:alt="user.username"
+							/>
+							<div class="min-w-0 flex-1">
+								<p class="truncate text-sm font-medium">
+									{{ user.displayName || user.username }}
+								</p>
+								<p class="truncate text-xs text-slate-500 dark:text-slate-400">
+									{{ user.hydrolineId }}
+								</p>
+							</div>
+							<UButton
+								size="xs"
+								color="neutral"
+								variant="soft"
+								@click="selectPublisher(user)"
+							>
+								{{ t('release.assignPublisher') }}
+							</UButton>
+							<UButton
+								size="xs"
+								:color="
+									contributorHydrolineIds.includes(user.hydrolineId)
+										? 'primary'
+										: 'neutral'
+								"
+								:variant="
+									contributorHydrolineIds.includes(user.hydrolineId)
+										? 'soft'
+										: 'ghost'
+								"
+								@click="toggleContributor(user)"
+								>{{ t('release.assignContributor') }}</UButton
+							>
+						</div>
+					</div>
+					<div class="flex justify-end gap-2">
+						<UButton
+							color="neutral"
+							variant="ghost"
+							@click="clientEditorOpen = false"
+							>{{ t('actions.cancel') }}</UButton
+						>
+						<UButton color="primary" @click="saveClientEditorial">{{
+							t('actions.save')
+						}}</UButton>
+					</div>
+				</div>
+			</template>
+		</UModal>
 	</section>
 </template>

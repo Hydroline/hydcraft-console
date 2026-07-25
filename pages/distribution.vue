@@ -5,6 +5,7 @@ interface Source {
 	labels: Record<string, string>
 	baseUrl: string
 	priority: number
+	isDefault: boolean
 	enabled: boolean
 	policy?: {
 		sourceDelivery?: 'public' | 'edgeone'
@@ -52,6 +53,7 @@ const source = reactive({
 	label: '',
 	baseUrl: '',
 	priority: 0,
+	isDefault: false,
 	sourceDelivery: 'public' as 'public' | 'edgeone',
 	signingKey: '',
 	authParam: 'token',
@@ -127,6 +129,7 @@ const resetSource = (): void => {
 		label: '',
 		baseUrl: '',
 		priority: 0,
+		isDefault: false,
 		sourceDelivery: 'public',
 		signingKey: '',
 		authParam: 'token',
@@ -146,6 +149,7 @@ const openSourceEditor = (existing?: Source): void => {
 		label: existing.labels['zh-CN'] ?? existing.key,
 		baseUrl: existing.baseUrl,
 		priority: existing.priority,
+		isDefault: existing.isDefault,
 		sourceDelivery: existing.policy?.sourceDelivery ?? 'public',
 		signingKey: '',
 		authParam: existing.policy?.authParam ?? 'token',
@@ -179,6 +183,7 @@ const saveSource = async () => {
 				labels: { 'zh-CN': source.label },
 				baseUrl: source.baseUrl,
 				priority: Number(source.priority),
+				isDefault: source.isDefault,
 				enabled: true,
 				policy:
 					source.sourceDelivery === 'edgeone'
@@ -358,6 +363,19 @@ const setPageSize = (value: number): void => {
 						}}
 					</UBadge>
 				</template>
+				<template #priority-cell="{ row }">
+					<div class="flex items-center gap-2">
+						<span>{{ row.original.priority }}</span>
+						<UBadge
+							v-if="row.original.isDefault"
+							color="primary"
+							variant="soft"
+							size="xs"
+						>
+							{{ t('distribution.defaultSource') }}
+						</UBadge>
+					</div>
+				</template>
 				<template #actions-cell="{ row }">
 					<UButton
 						size="xs"
@@ -535,6 +553,10 @@ const setPageSize = (value: number): void => {
 							type="number"
 							class="w-full"
 					/></UFormField>
+					<UCheckbox
+						v-model="source.isDefault"
+						:label="t('distribution.defaultSource')"
+					/>
 					<div class="flex justify-end gap-2">
 						<UButton
 							color="neutral"

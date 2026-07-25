@@ -71,7 +71,18 @@
 		"diffPreview": "Normalized preview",
 		"saveDraft": "Save draft",
 		"draftCreated": "Draft created",
-		"published": "Published atomically"
+		"published": "Published atomically",
+		"editClient": "Edit client details",
+		"changelog": "Changelog",
+		"publisher": "Publisher",
+		"contributors": "Contributors",
+		"noPublisher": "Not assigned",
+		"contributorCount": "{count} contributor(s) selected",
+		"peopleSearchPlaceholder": "Search Portal Hydroline ID or username",
+		"assignPublisher": "Set publisher",
+		"assignContributor": "Toggle contributor",
+		"clearPublisher": "Clear publisher",
+		"removeContributor": "Remove contributor"
 	},
 	"status": {
 		"DRAFT": "Draft",
@@ -79,6 +90,7 @@
 		"ARCHIVED": "Archived"
 	},
 	"distribution": {
+		"defaultSource": "Default download source",
 		"eyebrow": "Distribution topology",
 		"title": "Distribution",
 		"sources": "Sources",

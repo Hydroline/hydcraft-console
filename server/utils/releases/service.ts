@@ -4,7 +4,6 @@ import { createApiError } from '../errors'
 import { enqueuePostCommitEvent } from '../events/post-commit'
 import { updaterManifestSchema } from './contracts'
 
-const clientVersion = z.string().regex(/^\d+\.\d+\.\d+\.\d+$/)
 const updaterVersion = z
 	.string()
 	.regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/)

@@ -71,7 +71,18 @@
 		"diffPreview": "正規化プレビュー",
 		"saveDraft": "下書きを保存",
 		"draftCreated": "下書きを作成しました",
-		"published": "原子的に公開しました"
+		"published": "原子的に公開しました",
+		"editClient": "クライアント情報を編集",
+		"changelog": "変更履歴",
+		"publisher": "配布担当者",
+		"contributors": "貢献者",
+		"noPublisher": "未指定",
+		"contributorCount": "{count} 人の貢献者を選択",
+		"peopleSearchPlaceholder": "Portal Hydroline ID またはユーザー名を検索",
+		"assignPublisher": "配布担当者に設定",
+		"assignContributor": "貢献者を切り替え",
+		"clearPublisher": "配布担当者を解除",
+		"removeContributor": "貢献者を削除"
 	},
 	"status": {
 		"DRAFT": "下書き",
@@ -79,6 +90,7 @@
 		"ARCHIVED": "アーカイブ"
 	},
 	"distribution": {
+		"defaultSource": "既定のダウンロード元",
 		"eyebrow": "Distribution topology",
 		"title": "配信",
 		"sources": "ソース",

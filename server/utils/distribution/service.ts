@@ -44,6 +44,7 @@ export const distributionInputSchema = z.discriminatedUnion('type', [
 		labels,
 		baseUrl: z.string().url(),
 		priority: z.number().int(),
+		isDefault: z.boolean().default(false),
 		enabled: z.boolean(),
 		policy: sourcePolicyInputSchema.default({ sourceDelivery: 'public' }),
 	}),
@@ -84,6 +85,12 @@ export const saveDistribution = async (
 ) =>
 	prisma.$transaction(async (tx) => {
 		if (input.type === 'source') {
+			if (input.isDefault) {
+				await tx.distributionSource.updateMany({
+					where: { isDefault: true, key: { not: input.key } },
+					data: { isDefault: false },
+				})
+			}
 			const existing = await tx.distributionSource.findUnique({
 				where: { key: input.key },
 				select: { policy: true },
@@ -102,6 +109,7 @@ export const saveDistribution = async (
 					labels: input.labels,
 					baseUrl: input.baseUrl,
 					priority: input.priority,
+					isDefault: input.isDefault,
 					enabled: input.enabled,
 					policy,
 				},
@@ -109,6 +117,7 @@ export const saveDistribution = async (
 					labels: input.labels,
 					baseUrl: input.baseUrl,
 					priority: input.priority,
+					isDefault: input.isDefault,
 					enabled: input.enabled,
 					policy,
 				},

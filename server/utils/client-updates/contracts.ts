@@ -35,6 +35,14 @@ const clientMetadataSchema = z.object({
 	mods: z.array(clientModSchema).max(5000),
 })
 
+const hydrolineId = z.string().trim().min(1).max(128)
+
+export const clientReleaseEditorialSchema = z.object({
+	changelog: z.string().max(20000).optional(),
+	publisherHydrolineId: hydrolineId.nullable().optional(),
+	contributorHydrolineIds: z.array(hydrolineId).max(100).optional(),
+})
+
 export const clientReleaseSchema = z.object({
 	version,
 	manifest: z.object({
@@ -45,6 +53,7 @@ export const clientReleaseSchema = z.object({
 		changelog: z.string().max(20000).optional(),
 		metadata: clientMetadataSchema.optional(),
 		base: basePackage.optional(),
+		fullPackage: basePackage.optional(),
 	}),
 })
 
@@ -73,3 +82,6 @@ export const clientMigrationSchema = z.object({
 
 export type ClientReleaseInput = z.infer<typeof clientReleaseSchema>
 export type ClientMigrationInput = z.infer<typeof clientMigrationSchema>
+export type ClientReleaseEditorialInput = z.infer<
+	typeof clientReleaseEditorialSchema
+>
