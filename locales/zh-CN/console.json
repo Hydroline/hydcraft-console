@@ -1,5 +1,6 @@
 {
 	"nav": {
+		"home": "首页",
 		"releases": "发布中心",
 		"distribution": "分发",
 		"access": "访问权限",
@@ -12,6 +13,7 @@
 		"create": "创建",
 		"configure": "配置",
 		"search": "搜索",
+		"profile": "个人主页",
 		"logout": "退出 Console",
 		"collapse": "折叠侧栏",
 		"language": "切换语言",
@@ -46,13 +48,29 @@
 			"unexpected": "登录过程中发生未知错误，请重新尝试。"
 		}
 	},
+	"home": {
+		"subtitle": "玩家控制台",
+		"loginTitle": "登录后进入管理功能",
+		"loginDescription": "Console 使用 HydCraft Portal 的 Hydroline 身份服务，并会验证你的管理员权限。"
+	},
+	"localeNotice": {
+		"title": "检测到你的系统语言偏好为 {targetLanguage}",
+		"description": "当前页面语言是 {currentLanguage}。要切换到 {targetLanguage} 吗？",
+		"switchAction": "切换到 {targetLanguage}",
+		"keepAction": "暂不切换",
+		"localeNames": {
+			"zhCN": "简体中文",
+			"zhTW": "繁體中文",
+			"jaJP": "日本語",
+			"enUS": "English"
+		}
+	},
 	"release": {
 		"eyebrow": "Release control",
 		"title": "发布中心",
 		"newDraft": "新建草稿",
 		"client": "客户端",
 		"migrations": "客户端迁移",
-		"migrationNotice": "客户端更新包由 Workspace 上传；这里审核并发布 old → new 迁移。",
 		"updaterNotice": "Updater 草稿供 Bootstrap 下载和启动。",
 		"updaterDraftHint": "通常由 Updater 发布脚本自动创建草稿，无需手写 Manifest。",
 		"fromVersion": "起始版本",

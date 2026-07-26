@@ -338,7 +338,7 @@ const setPageSize = (value: number): void => {
 
 		<div
 			v-if="tab === 'sources'"
-			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
 		>
 			<UTable
 				:data="paginatedSources"
@@ -408,7 +408,7 @@ const setPageSize = (value: number): void => {
 
 		<div v-else class="space-y-6">
 			<div
-				class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+				class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
 			>
 				<UTable
 					:data="paginatedCategories"
@@ -452,7 +452,7 @@ const setPageSize = (value: number): void => {
 			</div>
 
 			<div
-				class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+				class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
 			>
 				<div class="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
 					<h2 class="font-medium">{{ t('distribution.entitlements') }}</h2>

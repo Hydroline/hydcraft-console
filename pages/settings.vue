@@ -89,7 +89,7 @@ const revoke = async (id: string) => {
 		</div>
 
 		<div
-			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
 		>
 			<UTable
 				:data="configurationRows"
@@ -114,7 +114,7 @@ const revoke = async (id: string) => {
 		</div>
 
 		<div
-			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
 		>
 			<UTable
 				:data="paginatedTokens"

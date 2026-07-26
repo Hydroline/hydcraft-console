@@ -1,5 +1,6 @@
 {
 	"nav": {
+		"home": "ホーム",
 		"releases": "リリース",
 		"distribution": "配信",
 		"access": "アクセス",
@@ -12,13 +13,14 @@
 		"create": "作成",
 		"configure": "設定",
 		"search": "検索",
+		"profile": "プロフィール",
 		"logout": "Console からログアウト",
 		"collapse": "サイドバーを折りたたむ",
 		"language": "言語を切り替える",
 		"theme": "テーマを切り替え",
 		"themeLight": "ライトモード",
 		"themeDark": "ダークモード",
-		"themeSystem": "システムに従う"
+		"themeSystem": "システム"
 	},
 	"pagination": {
 		"summary": "{page} / {pageCount} ページ、{total} 件",
@@ -46,13 +48,29 @@
 			"unexpected": "ログイン中に予期しないエラーが発生しました。もう一度お試しください。"
 		}
 	},
+	"home": {
+		"subtitle": "プレイヤーコンソール",
+		"loginTitle": "管理機能に入るにはログインが必要です",
+		"loginDescription": "Console は HydCraft Portal の Hydroline ID サービスを使用し、管理者権限を確認します。"
+	},
+	"localeNotice": {
+		"title": "お使いのシステム言語は {targetLanguage} のようです",
+		"description": "現在のページ言語は {currentLanguage} です。{targetLanguage} に切り替えますか？",
+		"switchAction": "{targetLanguage} に切り替える",
+		"keepAction": "このままにする",
+		"localeNames": {
+			"zhCN": "简体中文",
+			"zhTW": "繁體中文",
+			"jaJP": "日本語",
+			"enUS": "English"
+		}
+	},
 	"release": {
 		"eyebrow": "Release control",
 		"title": "リリースセンター",
 		"newDraft": "下書きを作成",
 		"client": "クライアント",
 		"migrations": "クライアント移行",
-		"migrationNotice": "クライアント更新パッケージは Workspace がアップロードし、ここで移行を公開します。",
 		"updaterNotice": "Updater の下書きは Bootstrap がダウンロードして起動します。",
 		"updaterDraftHint": "通常は Updater 公開スクリプトが下書きを自動作成します。",
 		"fromVersion": "移行元バージョン",

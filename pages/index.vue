@@ -3,9 +3,11 @@ definePageMeta({
 	public: true,
 })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const toast = useToast()
+const { data: me } = await useFetch('/api/auth/me')
+const authenticated = computed(() => Boolean(me.value?.identity))
 
 const oidcFailureMessages = {
 	callback_invalid: 'auth.oidcErrors.callbackInvalid',
@@ -38,32 +40,53 @@ onMounted(async () => {
 </script>
 
 <template>
-	<main
-		class="grid min-h-screen place-items-center bg-slate-50 p-6 dark:bg-slate-950"
-	>
-		<section class="w-full max-w-md p-8 text-center">
-			<div
-				class="mx-auto mb-5 grid size-12 place-items-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+	<div class="flex min-h-[calc(100vh-6rem)] flex-col justify-between">
+		<section
+			class="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center py-16 text-center sm:py-24"
+		>
+			<UIcon name="i-lucide-box" class="size-24" />
+			<h1
+				class="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-5xl dark:text-white"
 			>
-				<UIcon name="i-lucide-shield-check" class="size-6" />
-			</div>
-			<p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-				{{ t('auth.eyebrow') }}
-			</p>
-			<h1 class="mt-2 text-2xl font-semibold">
-				{{ t('auth.welcomeTitle') }}
+				HydCraft Console
 			</h1>
-			<p class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
-				{{ t('auth.welcomeDescription') }}
-			</p>
-			<UButton
-				color="primary"
-				class="mt-7"
-				to="/api/oidc/hydcraft/login"
-				external
+			<p
+				v-if="locale !== 'en-US'"
+				class="mt-1 text-lg text-slate-500 dark:text-slate-400 tracking-widest"
 			>
-				{{ t('auth.signIn') }}
-			</UButton>
+				{{ t('home.subtitle') }}
+			</p>
+
+			<div
+				v-if="!authenticated"
+				class="mt-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 text-left shadow-sm dark:border-slate-800 dark:bg-slate-950"
+			>
+				<div class="flex gap-3">
+					<div
+						class="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+					>
+						<UIcon name="i-lucide-shield-check" class="size-5" />
+					</div>
+					<div>
+						<h2 class="font-medium text-slate-900 dark:text-white">
+							{{ t('home.loginTitle') }}
+						</h2>
+						<p
+							class="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400"
+						>
+							{{ t('home.loginDescription') }}
+						</p>
+					</div>
+				</div>
+				<UButton
+					color="primary"
+					class="mt-5"
+					to="/api/oidc/hydcraft/login"
+					external
+				>
+					{{ t('auth.signIn') }}
+				</UButton>
+			</div>
 		</section>
-	</main>
+	</div>
 </template>

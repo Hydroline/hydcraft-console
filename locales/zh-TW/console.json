@@ -1,5 +1,6 @@
 {
 	"nav": {
+		"home": "首頁",
 		"releases": "發布中心",
 		"distribution": "分發",
 		"access": "存取權限",
@@ -12,6 +13,7 @@
 		"create": "建立",
 		"configure": "設定",
 		"search": "搜尋",
+		"profile": "個人主頁",
 		"logout": "登出 Console",
 		"collapse": "收合側欄",
 		"language": "切換語言",
@@ -46,13 +48,29 @@
 			"unexpected": "登入過程中發生未知錯誤，請重新嘗試。"
 		}
 	},
+	"home": {
+		"subtitle": "玩家控制台",
+		"loginTitle": "登入後進入管理功能",
+		"loginDescription": "Console 使用 HydCraft Portal 的 Hydroline 身分服務，並會驗證你的管理員權限。"
+	},
+	"localeNotice": {
+		"title": "偵測到你的系統語言偏好為 {targetLanguage}",
+		"description": "目前頁面語言是 {currentLanguage}。要切換到 {targetLanguage} 嗎？",
+		"switchAction": "切換到 {targetLanguage}",
+		"keepAction": "暫不切換",
+		"localeNames": {
+			"zhCN": "简体中文",
+			"zhTW": "繁體中文",
+			"jaJP": "日本語",
+			"enUS": "English"
+		}
+	},
 	"release": {
 		"eyebrow": "Release control",
 		"title": "發布中心",
 		"newDraft": "新增草稿",
 		"client": "用戶端",
 		"migrations": "用戶端遷移",
-		"migrationNotice": "用戶端更新包由 Workspace 上傳；這裡審核並發布 old → new 遷移。",
 		"updaterNotice": "Updater 草稿供 Bootstrap 下載並啟動。",
 		"updaterDraftHint": "通常由 Updater 發布腳本自動建立草稿。",
 		"fromVersion": "起始版本",

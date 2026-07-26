@@ -1,7 +1,165 @@
 <script setup lang="ts">
+import { useToast } from '@nuxt/ui/composables'
 import { en, ja, zh_cn, zh_tw } from '@nuxt/ui/locale'
 
-const { locale } = useI18n()
+type LocaleCode = 'zh-CN' | 'zh-TW' | 'ja-JP' | 'en-US'
+type LocaleNameKey = 'zhCN' | 'zhTW' | 'jaJP' | 'enUS'
+
+interface NuxtI18nApi {
+	setLocale?: (code: LocaleCode) => Promise<void>
+	loadLocaleMessages?: (code: LocaleCode) => Promise<void>
+}
+
+const toast = useToast()
+const nuxtApp = useNuxtApp()
+const { locale, t } = useI18n()
+const i18nApi = nuxtApp.$i18n as NuxtI18nApi
+const CHINESE_PRIMARY_LOCALES = new Set([
+	'zh',
+	'cmn',
+	'yue',
+	'wuu',
+	'hak',
+	'nan',
+])
+const TRADITIONAL_CHINESE_REGIONS = new Set(['tw', 'hk', 'mo'])
+const JAPANESE_PRIMARY_LOCALES = new Set(['ja', 'jp'])
+
+const isChineseLocale = (localeTag: string): boolean => {
+	if (!localeTag) return false
+
+	const primary = localeTag.split('-', 1)[0] ?? ''
+	return (
+		CHINESE_PRIMARY_LOCALES.has(primary) ||
+		localeTag.includes('chinese') ||
+		localeTag.includes('mandarin') ||
+		localeTag.includes('cantonese')
+	)
+}
+
+const resolveChineseLocaleCode = (localeTag: string): LocaleCode => {
+	const fragments = localeTag.split('-').filter(Boolean)
+	return fragments.includes('hant') ||
+		fragments.some((part) => TRADITIONAL_CHINESE_REGIONS.has(part))
+		? 'zh-TW'
+		: 'zh-CN'
+}
+
+const normalizeLocaleCode = (value: string | null | undefined): LocaleCode => {
+	const normalized = String(value ?? '')
+		.trim()
+		.toLowerCase()
+		.replace(/_/g, '-')
+	if (isChineseLocale(normalized)) return resolveChineseLocaleCode(normalized)
+
+	const primary = normalized.split('-', 1)[0] ?? ''
+	return JAPANESE_PRIMARY_LOCALES.has(primary) ||
+		normalized.includes('japanese')
+		? 'ja-JP'
+		: 'en-US'
+}
+
+const toLocaleNameKey = (localeCode: LocaleCode): LocaleNameKey => {
+	if (localeCode === 'zh-TW') return 'zhTW'
+	if (localeCode === 'en-US') return 'enUS'
+	if (localeCode === 'ja-JP') return 'jaJP'
+	return 'zhCN'
+}
+
+const setAppLocale = async (nextLocale: LocaleCode): Promise<void> => {
+	if (nextLocale === normalizeLocaleCode(locale.value)) return
+	if (i18nApi.setLocale) {
+		await i18nApi.setLocale(nextLocale)
+		return
+	}
+	locale.value = nextLocale
+}
+
+const translateLocaleNotice = (
+	key: string,
+	promptLocale: LocaleCode,
+	values: Record<string, string> = {},
+): string => t(key, values, { locale: promptLocale })
+
+const resolveLocaleDisplayName = (
+	localeCode: LocaleCode,
+	promptLocale: LocaleCode,
+): string =>
+	translateLocaleNotice(
+		`localeNotice.localeNames.${toLocaleNameKey(localeCode)}`,
+		promptLocale,
+	)
+
+let localeSuggestionChecked = false
+let localeSuggestionBusy = false
+
+const maybePromptLocaleSwitch = async (): Promise<void> => {
+	if (!import.meta.client || localeSuggestionBusy || localeSuggestionChecked)
+		return
+
+	localeSuggestionChecked = true
+	const preferredLocale = normalizeLocaleCode(useBrowserLocale())
+	const currentLocale = normalizeLocaleCode(locale.value)
+	if (preferredLocale === currentLocale) return
+
+	localeSuggestionBusy = true
+	try {
+		if (i18nApi.loadLocaleMessages)
+			await i18nApi.loadLocaleMessages(preferredLocale)
+
+		const targetLanguage = resolveLocaleDisplayName(
+			preferredLocale,
+			preferredLocale,
+		)
+		const currentLanguage = resolveLocaleDisplayName(
+			currentLocale,
+			preferredLocale,
+		)
+		const switchLabel = translateLocaleNotice(
+			'localeNotice.switchAction',
+			preferredLocale,
+			{ targetLanguage },
+		)
+		const toastEntry = toast.add({
+			id: 'locale-switch-once',
+			title: translateLocaleNotice('localeNotice.title', preferredLocale, {
+				targetLanguage,
+			}),
+			description: translateLocaleNotice(
+				'localeNotice.description',
+				preferredLocale,
+				{ currentLanguage, targetLanguage },
+			),
+			color: 'info',
+			icon: 'i-lucide-languages',
+			duration: 12000,
+			actions: [
+				{
+					label: switchLabel,
+					color: 'primary',
+					onClick: () => {
+						void setAppLocale(preferredLocale)
+						toast.remove(toastEntry.id)
+					},
+				},
+				{
+					label: translateLocaleNotice(
+						'localeNotice.keepAction',
+						preferredLocale,
+					),
+					color: 'neutral',
+					variant: 'ghost',
+					onClick: () => toast.remove(toastEntry.id),
+				},
+			],
+		})
+	} finally {
+		localeSuggestionBusy = false
+	}
+}
+
+if (import.meta.client) void maybePromptLocaleSwitch()
+
 const nuxtUiLocale = computed(
 	() =>
 		({ 'zh-CN': zh_cn, 'zh-TW': zh_tw, 'ja-JP': ja, 'en-US': en })[
@@ -11,7 +169,10 @@ const nuxtUiLocale = computed(
 </script>
 
 <template>
-	<UApp :locale="nuxtUiLocale" :toaster="{ position: 'top-right' }">
+	<UApp
+		:locale="nuxtUiLocale"
+		:toaster="{ position: 'top-right', ui: { viewport: 'z-[60000]' } }"
+	>
 		<NuxtLayout><NuxtPage /></NuxtLayout>
 	</UApp>
 </template>

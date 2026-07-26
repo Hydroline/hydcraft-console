@@ -1,5 +1,6 @@
 {
 	"nav": {
+		"home": "Home",
 		"releases": "Release Center",
 		"distribution": "Distribution",
 		"access": "Access",
@@ -12,13 +13,14 @@
 		"create": "Create",
 		"configure": "Configure",
 		"search": "Search",
+		"profile": "Profile",
 		"logout": "Sign out",
 		"collapse": "Collapse sidebar",
 		"language": "Switch language",
 		"theme": "Toggle theme",
 		"themeLight": "Light",
 		"themeDark": "Dark",
-		"themeSystem": "Use system setting"
+		"themeSystem": "System"
 	},
 	"pagination": {
 		"summary": "Page {page} / {pageCount}, {total} items",
@@ -46,13 +48,28 @@
 			"unexpected": "An unexpected error occurred during sign-in. Please try again."
 		}
 	},
+	"home": {
+		"loginTitle": "Sign in to access administrative features",
+		"loginDescription": "Console uses HydCraft Portal's Hydroline identity service and verifies your administrator access."
+	},
+	"localeNotice": {
+		"title": "Your system language looks like {targetLanguage}",
+		"description": "This page is currently in {currentLanguage}. Switch to {targetLanguage}?",
+		"switchAction": "Switch to {targetLanguage}",
+		"keepAction": "Keep current language",
+		"localeNames": {
+			"zhCN": "Simplified Chinese",
+			"zhTW": "Traditional Chinese",
+			"jaJP": "Japanese",
+			"enUS": "English"
+		}
+	},
 	"release": {
 		"eyebrow": "Release control",
 		"title": "Release Center",
 		"newDraft": "New draft",
 		"client": "Client",
 		"migrations": "Client migrations",
-		"migrationNotice": "Workspace uploads client packages; review and publish old-to-new migrations here.",
 		"updaterNotice": "Updater drafts are downloaded and launched by Bootstrap.",
 		"updaterDraftHint": "The Updater publish script normally creates this draft automatically.",
 		"fromVersion": "From version",

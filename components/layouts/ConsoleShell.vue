@@ -5,21 +5,37 @@ const toast = useToast()
 const colorMode = useNuxtApp().$colorMode
 const mobileOpen = ref(false)
 const localeMenuOpen = ref(false)
+const themeMenuOpen = ref(false)
+const accountMenuOpen = ref(false)
 const collapsed = useState('console-sidebar-collapsed', () => false)
 const { data: me, refresh } = await useFetch('/api/auth/me')
 const user = computed(() => me.value?.identity)
 const authenticated = computed(() => Boolean(user.value))
-const entries = computed(() => [
-	{ to: '/releases', label: t('nav.releases'), icon: 'i-lucide-rocket' },
-	{
-		to: '/distribution',
-		label: t('nav.distribution'),
-		icon: 'i-lucide-network',
-	},
-	{ to: '/access', label: t('nav.access'), icon: 'i-lucide-shield-check' },
-	{ to: '/audit', label: t('nav.audit'), icon: 'i-lucide-scroll-text' },
-	{ to: '/settings', label: t('nav.settings'), icon: 'i-lucide-settings-2' },
-])
+const profileUrl = computed(() =>
+	user.value?.username
+		? `https://hydcraft.cn/u/${encodeURIComponent(user.value.username)}`
+		: undefined,
+)
+const isAdministrator = computed(() =>
+	['ADMIN', 'OWNER'].includes(user.value?.role.toUpperCase() ?? ''),
+)
+const entries = computed(() => {
+	const home = { to: '/', label: t('nav.home'), icon: 'i-lucide-house' }
+	if (!isAdministrator.value) return [home]
+
+	return [
+		home,
+		{ to: '/releases', label: t('nav.releases'), icon: 'i-lucide-rocket' },
+		{
+			to: '/distribution',
+			label: t('nav.distribution'),
+			icon: 'i-lucide-network',
+		},
+		{ to: '/access', label: t('nav.access'), icon: 'i-lucide-shield-check' },
+		{ to: '/audit', label: t('nav.audit'), icon: 'i-lucide-scroll-text' },
+		{ to: '/settings', label: t('nav.settings'), icon: 'i-lucide-settings-2' },
+	]
+})
 type ThemeMode = 'light' | 'dark' | 'system'
 
 const themeIconMap = {
@@ -54,6 +70,7 @@ const themeButtonIcon = computed(() =>
 	getThemeModeIcon(selectedThemeMode.value),
 )
 const selectTheme = (nextTheme: ThemeMode): void => {
+	themeMenuOpen.value = false
 	colorMode.preference = nextTheme
 }
 const localeItems = [
@@ -82,23 +99,52 @@ const logout = async () => {
 		class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100"
 	>
 		<aside
-			class="fixed inset-y-0 left-0 z-40 hidden border-r border-slate-200 bg-white/95 p-3 backdrop-blur transition-[width] duration-300 ease-out dark:border-slate-800 dark:bg-slate-950/95 lg:flex lg:flex-col"
-			:class="collapsed ? 'w-18' : 'w-70'"
+			class="fixed inset-y-0 left-0 z-40 hidden border-r border-slate-200 bg-white/95 p-3 backdrop-blur transition-[width] duration-300 ease-out dark:border-slate-800 dark:bg-slate-900/95 lg:flex lg:flex-col"
+			:class="collapsed ? 'w-20' : 'w-70'"
 		>
-			<div
-				class="mb-7 flex items-center gap-3 px-2 py-1"
-				:class="collapsed ? 'justify-center' : ''"
-			>
+			<div class="relative mb-2 h-32 p-2">
 				<div
-					class="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-500 text-white shadow-sm"
+					class="absolute left-2 top-2 overflow-hidden whitespace-nowrap font-semibold tracking-tight transition-opacity duration-200"
+					:class="collapsed ? 'pointer-events-none opacity-0' : 'opacity-100'"
 				>
-					<UIcon name="i-lucide-box" class="size-5" />
+					<div class="ml-0.5 text-base font-normal">HydCraft</div>
+					<div class="-mt-1 text-3xl">Console</div>
+					<div
+						class="ml-0.5 mt-1 text-slate-500 dark:text-slate-400 font-normal text-sm tracking-wide"
+						v-if="locale !== 'en-US'"
+					>
+						{{ t('home.subtitle') }}
+					</div>
 				</div>
-				<span
-					class="overflow-hidden whitespace-nowrap font-semibold tracking-tight transition-[max-width,opacity] duration-200"
-					:class="collapsed ? 'max-w-0 opacity-0' : 'max-w-48 opacity-100'"
-					>HydCraft Console</span
+				<div
+					class="absolute inset-x-2 top-2 flex flex-col items-center gap-3 transition-opacity duration-200"
+					:class="collapsed ? 'opacity-100' : 'pointer-events-none opacity-0'"
 				>
+					<UIcon name="i-lucide-box" class="size-8" />
+					<UButton
+						color="neutral"
+						variant="ghost"
+						size="xs"
+						class="h-9 w-9 rounded-full hover:bg-slate-500/10 active:bg-slate-500/20"
+						icon-only
+						:aria-label="t('actions.collapse')"
+						@click="collapsed = false"
+					>
+						<UIcon name="i-lucide-panel-left-open" class="h-6 w-6" />
+					</UButton>
+				</div>
+				<UButton
+					color="neutral"
+					variant="ghost"
+					size="xs"
+					class="absolute right-2 top-2 h-9 w-9 rounded-full transition-opacity duration-200 hover:bg-slate-500/10 active:bg-slate-500/20"
+					:class="collapsed ? 'pointer-events-none opacity-0' : 'opacity-100'"
+					icon-only
+					:aria-label="t('actions.collapse')"
+					@click="collapsed = true"
+				>
+					<UIcon name="i-lucide-panel-left-close" class="h-6 w-6" />
+				</UButton>
 			</div>
 			<nav class="space-y-1" :class="collapsed ? 'space-y-2' : ''">
 				<NuxtLink
@@ -122,134 +168,197 @@ const logout = async () => {
 					>
 				</NuxtLink>
 			</nav>
-			<div class="mt-auto space-y-2">
+			<div class="mt-auto">
 				<div
-					v-if="authenticated"
-					class="flex rounded-xl border border-slate-200 bg-slate-50 text-xs dark:border-slate-800 dark:bg-slate-900"
-					:class="
-						collapsed
-							? 'flex-col items-center gap-1 p-1.5'
-							: 'items-center gap-3 p-3'
-					"
+					class="flex items-center transition-all duration-200"
+					:class="collapsed ? 'flex-col gap-2' : ''"
 				>
-					<UAvatar
-						:src="user?.avatarUrl || undefined"
-						:alt="user?.displayName || user?.username"
-						size="sm"
-					/>
-					<div v-if="!collapsed" class="min-w-0 flex-1">
-						<p class="truncate font-medium">
-							{{ user?.displayName || user?.username }}
-						</p>
-						<p class="truncate text-slate-500 dark:text-slate-400">
-							{{ user?.hydrolineId }}
-						</p>
+					<div
+						class="flex flex-1 items-center gap-2 transition-all duration-200"
+						:class="collapsed ? 'flex-none flex-col' : ''"
+					>
+						<UPopover
+							v-model:open="themeMenuOpen"
+							:popper="{ placement: 'top-start' }"
+						>
+							<UButton
+								color="neutral"
+								variant="ghost"
+								size="xs"
+								class="h-9 w-9 rounded-full hover:bg-slate-500/10 active:bg-slate-500/20"
+								icon-only
+								:aria-label="t('actions.theme')"
+							>
+								<UIcon :name="themeButtonIcon" class="h-6 w-6" />
+							</UButton>
+							<template #content>
+								<div class="flex w-40 flex-col gap-1 p-2">
+									<UButton
+										v-for="mode in themeModes"
+										:key="mode.value"
+										color="neutral"
+										variant="ghost"
+										class="w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-100 dark:hover:bg-slate-800"
+										:class="{
+											'bg-primary-100/60 text-primary-600 dark:bg-primary-500/20 dark:text-primary-200':
+												selectedThemeMode === mode.value,
+											'text-slate-600 dark:text-slate-300':
+												selectedThemeMode !== mode.value,
+										}"
+										@click="selectTheme(mode.value)"
+									>
+										<UIcon :name="mode.icon" class="size-4" />
+										<span>{{ mode.label }}</span>
+										<UIcon
+											v-if="selectedThemeMode === mode.value"
+											name="i-lucide-check"
+											class="ml-auto size-4"
+										/>
+									</UButton>
+								</div>
+							</template>
+						</UPopover>
+						<UPopover
+							v-model:open="localeMenuOpen"
+							:popper="{ placement: 'top-start' }"
+						>
+							<UButton
+								color="neutral"
+								variant="ghost"
+								size="xs"
+								class="h-9 w-9 rounded-full hover:bg-slate-500/10 active:bg-slate-500/20"
+								icon-only
+								:aria-label="t('actions.language')"
+							>
+								<UIcon name="i-lucide-languages" class="h-6 w-6" />
+							</UButton>
+							<template #content>
+								<div class="flex w-40 flex-col gap-1 p-2">
+									<UButton
+										v-for="item in localeItems"
+										:key="item.value"
+										color="neutral"
+										variant="ghost"
+										class="w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-100 dark:hover:bg-slate-800"
+										:class="{
+											'bg-primary-100/60 text-primary-600 dark:bg-primary-500/20 dark:text-primary-200':
+												locale === item.value,
+											'text-slate-600 dark:text-slate-300':
+												locale !== item.value,
+										}"
+										@click="selectLocale(item.value)"
+									>
+										<span>{{ item.label }}</span>
+										<UIcon
+											v-if="locale === item.value"
+											name="i-lucide-check"
+											class="ml-auto size-4"
+										/>
+									</UButton>
+								</div>
+							</template>
+						</UPopover>
 					</div>
-					<UButton
-						icon="i-lucide-log-out"
-						color="neutral"
-						variant="ghost"
-						size="xs"
-						:aria-label="t('actions.logout')"
-						@click="logout"
-					/>
+					<div :class="collapsed ? 'order-first' : 'order-last'">
+						<UButton
+							v-if="!authenticated"
+							to="/api/oidc/hydcraft/login"
+							external
+							color="neutral"
+							variant="link"
+							size="xs"
+							class="px-2 text-sm whitespace-nowrap transition-opacity duration-200 hover:opacity-80"
+						>
+							{{ t('auth.signIn') }}
+						</UButton>
+						<UPopover
+							v-else
+							v-model:open="accountMenuOpen"
+							:popper="{ placement: collapsed ? 'right-end' : 'top-end' }"
+						>
+							<button
+								type="button"
+								class="ml-0.5 flex h-9 items-center justify-center gap-1 rounded-full border-0 bg-transparent py-0 pr-1.5 pl-0 transition duration-150 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+								:aria-label="user?.displayName || user?.username"
+							>
+								<span
+									class="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-sm font-semibold text-slate-700 ring ring-slate-200 transition duration-200 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-700"
+								>
+									<CommonAvatarSkeletonImage
+										v-if="user?.avatarUrl"
+										:src="user.avatarUrl"
+										:alt="user.displayName || user.username"
+										image-class="h-full w-full object-cover"
+										class="h-full w-full"
+									/>
+									<span v-else class="leading-none">{{
+										(user?.displayName || user?.username || '?').slice(0, 1)
+									}}</span>
+								</span>
+								<UIcon
+									v-if="!collapsed"
+									name="i-lucide-chevron-up"
+									class="h-3.5 w-3.5 opacity-80 transition duration-200"
+									:class="{ 'rotate-180': accountMenuOpen }"
+								/>
+							</button>
+							<template #content>
+								<div class="flex min-w-40 flex-col gap-1 p-2">
+									<div class="px-3 py-2">
+										<div
+											class="line-clamp-2 wrap-break-word text-[17px] leading-snug font-semibold text-slate-600 dark:text-slate-300"
+										>
+											{{ user?.displayName || user?.username }}
+										</div>
+										<div
+											class="text-[13px] leading-[normal] text-slate-500/80 dark:text-slate-400/80"
+										>
+											{{ user?.hydrolineId }}
+										</div>
+									</div>
+									<UButton
+										v-if="profileUrl"
+										:to="profileUrl"
+										external
+										target="_blank"
+										rel="noopener noreferrer"
+										color="neutral"
+										variant="ghost"
+										class="w-full justify-start gap-1.5 rounded-lg px-3 py-2 text-left text-sm text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+									>
+										<UIcon name="i-lucide-user" class="h-4.5 w-4.5 shrink-0" />
+										<span class="leading-[normal] min-w-0 truncate">{{
+											t('actions.profile')
+										}}</span>
+									</UButton>
+									<div
+										class="my-1 border-t border-slate-200 dark:border-slate-700"
+									/>
+									<UButton
+										color="error"
+										variant="ghost"
+										class="w-full justify-start gap-1.5 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-error-50! active:bg-error-100! dark:hover:bg-error-900/25! dark:active:bg-error-900/35!"
+										@click="logout"
+									>
+										<UIcon
+											name="i-lucide-log-out"
+											class="h-4.5 w-4.5 shrink-0"
+										/>
+										<span class="leading-[normal] min-w-0 truncate">{{
+											t('actions.logout')
+										}}</span>
+									</UButton>
+								</div>
+							</template>
+						</UPopover>
+					</div>
 				</div>
-				<UButton
-					v-if="!authenticated"
-					to="/api/oidc/hydcraft/login"
-					external
-					icon="i-lucide-log-in"
-					:label="collapsed ? undefined : t('auth.signIn')"
-					color="primary"
-					variant="soft"
-					:aria-label="t('auth.signIn')"
-					:class="collapsed ? 'size-9 justify-center' : 'w-full justify-start'"
-				/>
-				<div
-					class="flex gap-1"
-					:class="collapsed ? 'flex-col items-center' : ''"
+				<p
+					v-if="!collapsed"
+					class="mt-2 text-center text-xs text-slate-400 transition-opacity duration-200 dark:text-slate-600"
 				>
-					<UPopover>
-						<UButton
-							:icon="themeButtonIcon"
-							color="neutral"
-							variant="ghost"
-							:class="collapsed ? 'size-9 justify-center' : ''"
-							:aria-label="t('actions.theme')"
-						/>
-						<template #content>
-							<div class="flex w-40 flex-col gap-1 p-2">
-								<UButton
-									v-for="mode in themeModes"
-									:key="mode.value"
-									color="neutral"
-									variant="ghost"
-									class="w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-100 dark:hover:bg-slate-800"
-									:class="{
-										'bg-primary-100/60 text-primary-600 dark:bg-primary-500/20 dark:text-primary-200':
-											selectedThemeMode === mode.value,
-										'text-slate-600 dark:text-slate-300':
-											selectedThemeMode !== mode.value,
-									}"
-									@click="selectTheme(mode.value)"
-								>
-									<UIcon :name="mode.icon" class="size-4" />
-									<span>{{ mode.label }}</span>
-									<UIcon
-										v-if="selectedThemeMode === mode.value"
-										name="i-lucide-check"
-										class="ml-auto size-4"
-									/>
-								</UButton>
-							</div>
-						</template>
-					</UPopover>
-					<UPopover v-model:open="localeMenuOpen">
-						<UButton
-							icon="i-lucide-languages"
-							color="neutral"
-							variant="ghost"
-							:class="collapsed ? 'size-9 justify-center' : ''"
-							:aria-label="t('actions.language')"
-						/>
-						<template #content>
-							<div class="flex w-40 flex-col gap-1 p-2">
-								<UButton
-									v-for="item in localeItems"
-									:key="item.value"
-									color="neutral"
-									variant="ghost"
-									class="w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-100 dark:hover:bg-slate-800"
-									:class="{
-										'bg-primary-100/60 text-primary-600 dark:bg-primary-500/20 dark:text-primary-200':
-											locale === item.value,
-										'text-slate-600 dark:text-slate-300': locale !== item.value,
-									}"
-									@click="selectLocale(item.value)"
-								>
-									<span>{{ item.label }}</span>
-									<UIcon
-										v-if="locale === item.value"
-										name="i-lucide-check"
-										class="ml-auto size-4"
-									/>
-								</UButton>
-							</div>
-						</template>
-					</UPopover>
-					<UButton
-						:icon="
-							collapsed
-								? 'i-lucide-panel-left-open'
-								: 'i-lucide-panel-left-close'
-						"
-						color="neutral"
-						variant="ghost"
-						:class="collapsed ? 'size-9 justify-center' : ''"
-						:aria-label="t('actions.collapse')"
-						@click="collapsed = !collapsed"
-					/>
-				</div>
+					Copyright © 2018 — 2026 HydCraft. All Rights Reserved.
+				</p>
 			</div>
 		</aside>
 		<div class="lg:hidden">
@@ -264,25 +373,186 @@ const logout = async () => {
 				side="left"
 				:title="'HydCraft Console'"
 				><template #body
-					><nav class="space-y-2">
-						<NuxtLink
-							v-for="item in entries"
-							:key="item.to"
-							:to="item.to"
-							class="flex items-center gap-3 rounded-lg px-3 py-2"
-							@click="mobileOpen = false"
-							><UIcon :name="item.icon" class="size-5" />{{
-								item.label
-							}}</NuxtLink
-						>
-					</nav></template
+					><div class="flex min-h-full flex-col">
+						<nav class="space-y-2">
+							<NuxtLink
+								v-for="item in entries"
+								:key="item.to"
+								:to="item.to"
+								class="flex items-center gap-3 rounded-lg px-3 py-2"
+								@click="mobileOpen = false"
+								><UIcon :name="item.icon" class="size-5" />{{
+									item.label
+								}}</NuxtLink
+							>
+						</nav>
+						<div class="mt-auto flex items-center">
+							<div class="flex flex-1 items-center gap-2">
+								<UPopover
+									v-model:open="themeMenuOpen"
+									:popper="{ placement: 'top-start' }"
+								>
+									<UButton
+										color="neutral"
+										variant="ghost"
+										size="xs"
+										class="h-9 w-9 rounded-full hover:bg-slate-500/10 active:bg-slate-500/20"
+										icon-only
+										:aria-label="t('actions.theme')"
+									>
+										<UIcon :name="themeButtonIcon" class="h-6 w-6" />
+									</UButton>
+									<template #content>
+										<div class="flex w-40 flex-col gap-1 p-2">
+											<UButton
+												v-for="mode in themeModes"
+												:key="mode.value"
+												color="neutral"
+												variant="ghost"
+												class="w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-100 dark:hover:bg-slate-800"
+												:class="{
+													'bg-primary-100/60 text-primary-600 dark:bg-primary-500/20 dark:text-primary-200':
+														selectedThemeMode === mode.value,
+													'text-slate-600 dark:text-slate-300':
+														selectedThemeMode !== mode.value,
+												}"
+												@click="selectTheme(mode.value)"
+											>
+												<UIcon :name="mode.icon" class="size-4" />
+												<span>{{ mode.label }}</span>
+											</UButton>
+										</div>
+									</template>
+								</UPopover>
+								<UPopover
+									v-model:open="localeMenuOpen"
+									:popper="{ placement: 'top-start' }"
+								>
+									<UButton
+										color="neutral"
+										variant="ghost"
+										size="xs"
+										class="h-9 w-9 rounded-full hover:bg-slate-500/10 active:bg-slate-500/20"
+										icon-only
+										:aria-label="t('actions.language')"
+									>
+										<UIcon name="i-lucide-languages" class="h-6 w-6" />
+									</UButton>
+									<template #content>
+										<div class="flex w-40 flex-col gap-1 p-2">
+											<UButton
+												v-for="item in localeItems"
+												:key="item.value"
+												color="neutral"
+												variant="ghost"
+												class="w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-100 dark:hover:bg-slate-800"
+												:class="{
+													'bg-primary-100/60 text-primary-600 dark:bg-primary-500/20 dark:text-primary-200':
+														locale === item.value,
+													'text-slate-600 dark:text-slate-300':
+														locale !== item.value,
+												}"
+												@click="selectLocale(item.value)"
+											>
+												<span>{{ item.label }}</span>
+											</UButton>
+										</div>
+									</template>
+								</UPopover>
+							</div>
+							<UButton
+								v-if="!authenticated"
+								to="/api/oidc/hydcraft/login"
+								external
+								color="neutral"
+								variant="link"
+								size="xs"
+								class="px-2 text-sm whitespace-nowrap transition-opacity duration-200 hover:opacity-80"
+								>{{ t('auth.signIn') }}</UButton
+							>
+							<UPopover
+								v-else
+								v-model:open="accountMenuOpen"
+								:popper="{ placement: 'top-end' }"
+							>
+								<button
+									type="button"
+									class="ml-0.5 flex h-9 items-center justify-center gap-1 rounded-full border-0 bg-transparent py-0 pr-1.5 pl-0 transition duration-150 hover:opacity-80"
+									:aria-label="user?.displayName || user?.username"
+								>
+									<span
+										class="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-sm font-semibold text-slate-700 ring ring-slate-200 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-700"
+									>
+										<CommonAvatarSkeletonImage
+											v-if="user?.avatarUrl"
+											:src="user.avatarUrl"
+											:alt="user.displayName || user.username"
+											image-class="h-full w-full object-cover"
+											class="h-full w-full"
+										/>
+										<span v-else class="leading-none">{{
+											(user?.displayName || user?.username || '?').slice(0, 1)
+										}}</span>
+									</span>
+									<UIcon
+										name="i-lucide-chevron-up"
+										class="h-3.5 w-3.5 opacity-80 transition duration-200"
+										:class="{ 'rotate-180': accountMenuOpen }"
+									/>
+								</button>
+								<template #content>
+									<div class="flex min-w-40 flex-col gap-1 p-2">
+										<div class="px-3 py-2">
+											<div
+												class="line-clamp-2 wrap-break-word text-[17px] leading-snug font-semibold text-slate-600 dark:text-slate-300"
+											>
+												{{ user?.displayName || user?.username }}
+											</div>
+											<div
+												class="text-[13px] leading-[normal] text-slate-500/80 dark:text-slate-400/80"
+											>
+												{{ user?.hydrolineId }}
+											</div>
+										</div>
+										<UButton
+											v-if="profileUrl"
+											:to="profileUrl"
+											external
+											target="_blank"
+											rel="noopener noreferrer"
+											color="neutral"
+											variant="ghost"
+											class="w-full justify-start gap-1.5 rounded-lg px-3 py-2 text-left text-sm text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+											><UIcon
+												name="i-lucide-user"
+												class="h-4.5 w-4.5 shrink-0"
+											/><span>{{ t('actions.profile') }}</span></UButton
+										>
+										<div
+											class="my-1 border-t border-slate-200 dark:border-slate-700"
+										/>
+										<UButton
+											color="error"
+											variant="ghost"
+											class="w-full justify-start gap-1.5 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-error-50! dark:hover:bg-error-900/25!"
+											@click="logout"
+											><UIcon
+												name="i-lucide-log-out"
+												class="h-4.5 w-4.5 shrink-0"
+											/><span>{{ t('actions.logout') }}</span></UButton
+										>
+									</div>
+								</template>
+							</UPopover>
+						</div>
+					</div></template
 				></USlideover
 			>
 		</div>
 		<main
-			class="min-h-screen p-7 pt-28 transition-[padding] duration-300 ease-out lg:py-12 lg:pr-12"
+			class="min-h-screen p-7 pt-28 transition-[padding] duration-300 ease-out lg:pb-6 lg:pt-12 lg:pr-12"
 			:class="
-				collapsed ? 'lg:pl-[calc(4.5rem+3rem)]' : 'lg:pl-[calc(17.5rem+3rem)]'
+				collapsed ? 'lg:pl-[calc(5rem+3rem)]' : 'lg:pl-[calc(17.5rem+3rem)]'
 			"
 		>
 			<div class="mx-auto w-full max-w-[84rem]"><slot /></div>

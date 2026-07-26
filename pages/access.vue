@@ -113,7 +113,7 @@ const save = async () => {
 		</form>
 
 		<div
-			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
 		>
 			<UTable
 				:data="results?.items ?? []"
@@ -176,7 +176,7 @@ const save = async () => {
 		</div>
 
 		<div
-			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
 		>
 			<div class="border-b border-slate-200 p-5 dark:border-slate-800">
 				<h2 class="font-medium">

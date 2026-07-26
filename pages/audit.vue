@@ -45,7 +45,7 @@ const formatDate = (value: string): string =>
 			</h1>
 		</div>
 		<div
-			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
 		>
 			<UTable
 				:data="paginatedItems"

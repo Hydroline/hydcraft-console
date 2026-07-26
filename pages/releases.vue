@@ -266,12 +266,11 @@ const saveClientEditorial = async () => {
 				<h1 class="text-3xl font-semibold tracking-tight">
 					{{ t('release.title') }}
 				</h1>
-				<p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-					{{
-						selectedKind === 'MIGRATION'
-							? t('release.migrationNotice')
-							: t('release.updaterNotice')
-					}}
+				<p
+					v-if="selectedKind === 'UPDATER'"
+					class="mt-2 text-sm text-slate-500 dark:text-slate-400"
+				>
+					{{ t('release.updaterNotice') }}
 				</p>
 			</div>
 			<UButton
@@ -301,7 +300,7 @@ const saveClientEditorial = async () => {
 			>
 		</div>
 		<div
-			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
 		>
 			<UTable
 				:data="paginated"
