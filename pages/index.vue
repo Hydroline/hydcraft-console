@@ -57,36 +57,31 @@ onMounted(async () => {
 				{{ t('home.subtitle') }}
 			</p>
 
-			<div
+			<a
 				v-if="!authenticated"
-				class="mt-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 text-left shadow-sm dark:border-slate-800 dark:bg-slate-950"
+				href="/api/oidc/hydcraft/login"
+				class="group mt-10 w-full max-w-md cursor-pointer rounded-xl border border-slate-200 bg-white p-6 text-left shadow-sm transition-colors hover:bg-slate-900/80 hover:text-white dark:border-slate-800 dark:bg-slate-900"
 			>
 				<div class="flex gap-3">
 					<div
-						class="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+						class="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600 transition-colors group-hover:bg-slate-800 group-hover:text-slate-200 dark:bg-slate-800 dark:text-slate-300"
 					>
 						<UIcon name="i-lucide-shield-check" class="size-5" />
 					</div>
 					<div>
-						<h2 class="font-medium text-slate-900 dark:text-white">
+						<h2
+							class="font-medium text-slate-900 transition-colors group-hover:text-white dark:text-white"
+						>
 							{{ t('home.loginTitle') }}
 						</h2>
 						<p
-							class="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400"
+							class="mt-1 text-sm leading-6 text-slate-500 transition-colors group-hover:text-slate-300 dark:text-slate-400"
 						>
 							{{ t('home.loginDescription') }}
 						</p>
 					</div>
 				</div>
-				<UButton
-					color="primary"
-					class="mt-5"
-					to="/api/oidc/hydcraft/login"
-					external
-				>
-					{{ t('auth.signIn') }}
-				</UButton>
-			</div>
+			</a>
 		</section>
 	</div>
 </template>

@@ -3,6 +3,7 @@
 		"home": "Home",
 		"releases": "Release Center",
 		"distribution": "Distribution",
+		"pclHomepage": "PCL Homepage",
 		"access": "Access",
 		"audit": "Audit",
 		"settings": "Settings"
@@ -36,7 +37,7 @@
 		"welcomeDescription": "Console uses the Hydroline identity service hosted by HydCraft Portal. Your administrator access is verified after sign-in.",
 		"signedOut": "Signed out of Console",
 		"signedOutDescription": "Your HydCraft Portal session remains active.",
-		"signIn": "Sign in with HydCraft Portal",
+		"signIn": "Sign in",
 		"oidcFailedTitle": "Sign-in was not completed",
 		"oidcErrors": {
 			"callbackInvalid": "The sign-in callback is invalid. Please start again.",
@@ -179,6 +180,7 @@
 		"revoked": "Revoked",
 		"active": "Active",
 		"configuration": "Configuration",
+		"requestCount": "Requests (7 days)",
 		"value": "Status",
 		"scopes": "Scopes",
 		"createdAt": "Created at",
@@ -186,6 +188,33 @@
 		"emptyTokens": "No publish tokens yet.",
 		"configured": "Configured",
 		"missing": "Missing"
+	},
+	"pclHomepage": {
+		"title": "PCL Launcher Homepage",
+		"description": "Edit the PCL custom-homepage XAML for each HydCraft Portal server.",
+		"server": "Server",
+		"configuration": "Configuration",
+		"configured": "Configured",
+		"notConfigured": "Not configured",
+		"edit": "Edit",
+		"empty": "No Portal servers found.",
+		"back": "Back to PCL homepages",
+		"saved": "PCL homepage saved",
+		"unsavedChanges": "There are unsaved changes.",
+		"formatted": "XAML formatted.",
+		"alreadyFormatted": "XAML already matches the current format.",
+		"formatFailed": "XAML syntax is invalid and cannot be formatted.",
+		"variableHelp": "Available variables",
+		"variableDescription": "Variables are replaced with the server's current data when PCL requests the public XAML.",
+		"variables": {
+			"serverStatus": "Server status: ONLINE when Portal Bridge is connected, otherwise OFFLINE; the Portal configuration status is used without live bridge data.",
+			"onlinePlayers": "Current online player count; 0 when live data is unavailable.",
+			"latestClientVersion": "Latest published client version for this server; empty when none is found.",
+			"latestClientPublishedAt": "Publication date of that client version in Shanghai YYYY/M/D format; empty when none is found.",
+			"latestClientPublisher": "Publisher of that client version, preferring display name then username; empty when unset.",
+			"currentDate": "Current date in Shanghai YYYY/M/D format.",
+			"todayRequestCount": "Today's PCL homepage requests for this server. The current request is included, using Shanghai calendar days."
+		}
 	},
 	"errors": {
 		"invalidManifest": "The manifest must be valid JSON with schemaVersion 1.",

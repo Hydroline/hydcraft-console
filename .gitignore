@@ -9,6 +9,7 @@ tmp
 
 # Node dependencies
 node_modules
+.pnpm-store
 generated
 
 # Logs

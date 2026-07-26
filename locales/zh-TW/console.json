@@ -3,6 +3,7 @@
 		"home": "首頁",
 		"releases": "發布中心",
 		"distribution": "分發",
+		"pclHomepage": "PCL 首頁",
 		"access": "存取權限",
 		"audit": "稽核",
 		"settings": "設定"
@@ -36,7 +37,7 @@
 		"welcomeDescription": "Console 使用 HydCraft Portal 的 Hydroline 身分服務。登入後將驗證你的管理員權限。",
 		"signedOut": "已登出 Console",
 		"signedOutDescription": "你的 HydCraft Portal 登入狀態仍會保留。",
-		"signIn": "使用 HydCraft Portal 登入",
+		"signIn": "登入",
 		"oidcFailedTitle": "登入未完成",
 		"oidcErrors": {
 			"callbackInvalid": "登入回呼無效，請重新開始登入。",
@@ -183,6 +184,34 @@
 		"emptyTokens": "尚無發布權杖。",
 		"configured": "已設定",
 		"missing": "未設定"
+	},
+	"pclHomepage": {
+		"title": "PCL 啟動器首頁",
+		"description": "為每個 HydCraft Portal 伺服器編輯 PCL 自訂首頁 XAML。",
+		"server": "伺服器",
+		"configuration": "設定",
+		"requestCount": "存取次數（7 天）",
+		"configured": "已設定",
+		"notConfigured": "未設定",
+		"edit": "編輯",
+		"empty": "Portal 中尚無伺服器。",
+		"back": "返回 PCL 首頁列表",
+		"saved": "PCL 首頁已儲存",
+		"unsavedChanges": "有尚未儲存的修改。",
+		"formatted": "XAML 已格式化。",
+		"alreadyFormatted": "XAML 已符合目前格式。",
+		"formatFailed": "XAML 語法無效，無法格式化。",
+		"variableHelp": "可用變數",
+		"variableDescription": "PCL 請求公開 XAML 時，變數會替換為該伺服器的目前資料。",
+		"variables": {
+			"serverStatus": "伺服器狀態：Portal Bridge 已連線時為 ONLINE，否則為 OFFLINE；沒有即時 Bridge 資料時使用 Portal 設定狀態。",
+			"onlinePlayers": "目前線上人數；無即時資料時為 0。",
+			"latestClientVersion": "此伺服器對應的最新已發布用戶端版本；找不到時留空。",
+			"latestClientPublishedAt": "此用戶端版本的發佈時間，使用上海時區 YYYY/M/D 格式；找不到時留空。",
+			"latestClientPublisher": "此用戶端版本的發佈人，優先顯示名稱，其次使用者名稱；未設定時留空。",
+			"currentDate": "目前日期，使用上海時區 YYYY/M/D 格式。",
+			"todayRequestCount": "目前伺服器的 PCL 首頁今日存取次數；本次請求也會計入，按上海時區自然日統計。"
+		}
 	},
 	"errors": {
 		"invalidManifest": "Manifest 必須是有效 JSON 並符合 schemaVersion 1。",

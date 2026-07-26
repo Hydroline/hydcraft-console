@@ -33,6 +33,28 @@ model ConsolePolicy {
   updatedAt   DateTime @updatedAt
 }
 
+model PclHomepage {
+  id             String   @id @default(cuid())
+  portalServerId String   @unique
+  xaml           String   @db.Text
+  createdById    String?
+  updatedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model PclHomepageRequestDay {
+  id             String   @id @default(cuid())
+  portalServerId String
+  day            DateTime
+  requestCount   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([portalServerId, day])
+  @@index([day])
+}
+
 model ClientRelease {
   id          String              @id @default(cuid())
   version     String

@@ -27,6 +27,11 @@ const entries = computed(() => {
 		home,
 		{ to: '/releases', label: t('nav.releases'), icon: 'i-lucide-rocket' },
 		{
+			to: '/launcher/pcl',
+			label: t('nav.pclHomepage'),
+			icon: 'i-lucide-panels-top-left',
+		},
+		{
 			to: '/distribution',
 			label: t('nav.distribution'),
 			icon: 'i-lucide-network',

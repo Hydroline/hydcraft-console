@@ -3,6 +3,7 @@
 		"home": "ホーム",
 		"releases": "リリース",
 		"distribution": "配信",
+		"pclHomepage": "PCL ホームページ",
 		"access": "アクセス",
 		"audit": "監査",
 		"settings": "設定"
@@ -36,7 +37,7 @@
 		"welcomeDescription": "Console は HydCraft Portal の Hydroline ID サービスを使用します。ログイン後に管理者権限を確認します。",
 		"signedOut": "Console からログアウトしました",
 		"signedOutDescription": "HydCraft Portal のログイン状態は維持されます。",
-		"signIn": "HydCraft Portal でログイン",
+		"signIn": "ログイン",
 		"oidcFailedTitle": "ログインを完了できませんでした",
 		"oidcErrors": {
 			"callbackInvalid": "ログインコールバックが無効です。もう一度ログインを開始してください。",
@@ -187,6 +188,34 @@
 		"emptyTokens": "公開トークンはありません。",
 		"configured": "設定済み",
 		"missing": "未設定"
+	},
+	"pclHomepage": {
+		"title": "PCL ランチャーホームページ",
+		"description": "HydCraft Portal の各サーバー向けに PCL カスタムホームページ XAML を編集します。",
+		"server": "サーバー",
+		"configuration": "設定",
+		"requestCount": "アクセス数（7 日間）",
+		"configured": "設定済み",
+		"notConfigured": "未設定",
+		"edit": "編集",
+		"empty": "Portal にサーバーがありません。",
+		"back": "PCL ホームページ一覧に戻る",
+		"saved": "PCL ホームページを保存しました",
+		"unsavedChanges": "未保存の変更があります。",
+		"formatted": "XAML を整形しました。",
+		"alreadyFormatted": "XAML は現在の形式に整っています。",
+		"formatFailed": "XAML の構文が無効なため整形できません。",
+		"variableHelp": "利用可能な変数",
+		"variableDescription": "PCL が公開 XAML をリクエストすると、変数はこのサーバーの現在データに置き換えられます。",
+		"variables": {
+			"serverStatus": "サーバー状態：Portal Bridge 接続時は ONLINE、それ以外は OFFLINE。ライブ Bridge データがない場合は Portal 設定状態を使用します。",
+			"onlinePlayers": "現在のオンライン人数。ライブデータがない場合は 0。",
+			"latestClientVersion": "このサーバーの最新公開クライアントバージョン。見つからない場合は空です。",
+			"latestClientPublishedAt": "そのクライアント版の公開日です。上海時間の YYYY/M/D 形式で返し、見つからない場合は空です。",
+			"latestClientPublisher": "そのクライアント版の公開者です。表示名を優先し、次にユーザー名を使います。未設定時は空です。",
+			"currentDate": "現在の日付です。上海時間の YYYY/M/D 形式で返します。",
+			"todayRequestCount": "このサーバーの PCL ホームページの本日のアクセス数です。今回のリクエストも含み、上海時間の日付で集計します。"
+		}
 	},
 	"errors": {
 		"invalidManifest": "manifest は有効な JSON で schemaVersion 1 である必要があります。",
