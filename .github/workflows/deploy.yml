@@ -85,10 +85,11 @@ jobs:
 
               cp /app/package.json /app/pnpm-lock.yaml /app/prisma.config.ts /app/deploy-artifact/
               cp -R /app/prisma /app/deploy-artifact/prisma
+              mkdir -p /app/deploy-artifact/.output
               cp -R /app/.output/public \
                     /app/.output/server \
-                    /app/deploy-artifact/
-              cp /app/.output/nitro.json /app/deploy-artifact/nitro.json
+                    /app/deploy-artifact/.output/
+              cp /app/.output/nitro.json /app/deploy-artifact/.output/nitro.json
 
               pnpm install --prod --frozen-lockfile --dir /app/deploy-artifact
 
@@ -96,6 +97,7 @@ jobs:
               test -f /app/deploy-artifact/prisma.config.ts
               test -f /app/deploy-artifact/prisma/schema/migrations/migration_lock.toml
               test -f /app/deploy-artifact/node_modules/.bin/prisma
+              test -f /app/deploy-artifact/.output/server/index.mjs
               (
                 cd /app/deploy-artifact
                 DATABASE_URL="postgresql://prisma:prisma@127.0.0.1:5432/prisma?schema=public" \
