@@ -1,0 +1,52 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '**'
+    paths-ignore:
+      - 'README.md'
+  pull_request:
+    branches:
+      - '**'
+    paths-ignore:
+      - 'README.md'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hydcraft_console?schema=public
+      NUXT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hydcraft_console?schema=public
+      NUXT_SESSION_SECRET: ci-demo-session-secret
+      NUXT_HYDROLINE_ISSUER: https://hydcraft.example
+      NUXT_OIDC_CLIENT_ID: ci-demo-client
+      NUXT_OIDC_CLIENT_SECRET: ci-demo-client-secret
+      NUXT_OIDC_REDIRECT_URI: https://hydcraft.example/api/oidc/hydcraft/callback
+      NUXT_SOURCE_SECRET_ENCRYPTION_KEY: ci-demo-source-encryption-key
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@10.14.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm prisma:generate
+
+      - name: Build
+        run: pnpm build
