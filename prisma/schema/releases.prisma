@@ -53,6 +53,8 @@ model PclHomepageServerSnapshot {
   nameEnUs       String
   nameJaJp       String
   status         String
+  isDefault      Boolean  @default(false)
+  sortOrder      Int      @default(0)
   lastSeenAt     DateTime @default(now())
   missingAt      DateTime?
   createdAt      DateTime @default(now())

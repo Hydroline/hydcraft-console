@@ -1,0 +1,3 @@
+ALTER TABLE "PclHomepageServerSnapshot"
+ADD COLUMN "isDefault" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "sortOrder" INTEGER NOT NULL DEFAULT 0;

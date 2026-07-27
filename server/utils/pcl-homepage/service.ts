@@ -13,6 +13,8 @@ interface PortalServer {
 	nameEnUs: string
 	nameJaJp: string
 	status: string
+	isDefault: boolean
+	sortOrder: number
 }
 
 interface PortalServersResponse {
@@ -73,6 +75,8 @@ const toPortalServer = (server: {
 	nameEnUs: string
 	nameJaJp: string
 	status: string
+	isDefault: boolean
+	sortOrder: number
 }): PortalServer => ({
 	id: server.portalServerId,
 	serverId: server.serverId,
@@ -83,6 +87,8 @@ const toPortalServer = (server: {
 	nameEnUs: server.nameEnUs,
 	nameJaJp: server.nameJaJp,
 	status: server.status,
+	isDefault: server.isDefault,
+	sortOrder: server.sortOrder,
 })
 
 const shanghaiDayStart = (date: Date) => {
@@ -139,6 +145,8 @@ const synchronizePortalServers = async () => {
 						nameEnUs: server.nameEnUs,
 						nameJaJp: server.nameJaJp,
 						status: server.status,
+						isDefault: server.isDefault,
+						sortOrder: server.sortOrder,
 						lastSeenAt: new Date(),
 					},
 					update: {
@@ -150,6 +158,8 @@ const synchronizePortalServers = async () => {
 						nameEnUs: server.nameEnUs,
 						nameJaJp: server.nameJaJp,
 						status: server.status,
+						isDefault: server.isDefault,
+						sortOrder: server.sortOrder,
 						lastSeenAt: new Date(),
 						missingAt: null,
 					},
@@ -231,7 +241,14 @@ export const listPclHomepageServers = async (): Promise<
 	}
 
 	const [servers, homepages, requestCounts] = await Promise.all([
-		prisma.pclHomepageServerSnapshot.findMany({ orderBy: { nameZhCn: 'asc' } }),
+		prisma.pclHomepageServerSnapshot.findMany({
+			orderBy: [
+				{ missingAt: { sort: 'asc', nulls: 'first' } },
+				{ isDefault: 'desc' },
+				{ sortOrder: 'asc' },
+				{ createdAt: 'asc' },
+			],
+		}),
 		prisma.pclHomepage.findMany({ select: { portalServerId: true } }),
 		prisma.pclHomepageRequestDay.groupBy({
 			by: ['portalServerId'],
