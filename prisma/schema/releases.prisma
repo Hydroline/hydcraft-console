@@ -43,6 +43,27 @@ model PclHomepage {
   updatedAt      DateTime @updatedAt
 }
 
+model PclHomepageServerSnapshot {
+  portalServerId String   @id
+  serverId       String
+  code           String
+  shortCode      String
+  nameZhCn       String
+  nameZhTw       String
+  nameEnUs       String
+  nameJaJp       String
+  status         String
+  lastSeenAt     DateTime @default(now())
+  missingAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([serverId])
+  @@index([code])
+  @@index([shortCode])
+  @@index([missingAt])
+}
+
 model PclHomepageRequestDay {
   id             String   @id @default(cuid())
   portalServerId String

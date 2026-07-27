@@ -63,6 +63,28 @@ const listPortalServers = async () =>
 
 const normalizeIdentifier = (value: string) => value.trim().toLocaleLowerCase()
 
+const toPortalServer = (server: {
+	portalServerId: string
+	serverId: string
+	code: string
+	shortCode: string
+	nameZhCn: string
+	nameZhTw: string
+	nameEnUs: string
+	nameJaJp: string
+	status: string
+}): PortalServer => ({
+	id: server.portalServerId,
+	serverId: server.serverId,
+	code: server.code,
+	shortCode: server.shortCode,
+	nameZhCn: server.nameZhCn,
+	nameZhTw: server.nameZhTw,
+	nameEnUs: server.nameEnUs,
+	nameJaJp: server.nameJaJp,
+	status: server.status,
+})
+
 const shanghaiDayStart = (date: Date) => {
 	const parts = new Intl.DateTimeFormat('en-US', {
 		timeZone: 'Asia/Shanghai',
@@ -91,23 +113,125 @@ const recordPclHomepageRequest = async (portalServerId: string) => {
 	})
 }
 
-const resolvePortalServer = async (identifier: string) => {
+const synchronizePortalServers = async () => {
+	const servers = await listPortalServers()
+	const configured = new Set(
+		(
+			await prisma.pclHomepage.findMany({
+				select: { portalServerId: true },
+			})
+		).map((homepage) => homepage.portalServerId),
+	)
+	const currentIds = new Set(servers.map((server) => server.id))
+
+	await prisma.$transaction(async (tx) => {
+		await Promise.all(
+			servers.map((server) =>
+				tx.pclHomepageServerSnapshot.upsert({
+					where: { portalServerId: server.id },
+					create: {
+						portalServerId: server.id,
+						serverId: server.serverId,
+						code: server.code,
+						shortCode: server.shortCode,
+						nameZhCn: server.nameZhCn,
+						nameZhTw: server.nameZhTw,
+						nameEnUs: server.nameEnUs,
+						nameJaJp: server.nameJaJp,
+						status: server.status,
+						lastSeenAt: new Date(),
+					},
+					update: {
+						serverId: server.serverId,
+						code: server.code,
+						shortCode: server.shortCode,
+						nameZhCn: server.nameZhCn,
+						nameZhTw: server.nameZhTw,
+						nameEnUs: server.nameEnUs,
+						nameJaJp: server.nameJaJp,
+						status: server.status,
+						lastSeenAt: new Date(),
+						missingAt: null,
+					},
+				}),
+			),
+		)
+
+		const snapshots = await tx.pclHomepageServerSnapshot.findMany({
+			select: { portalServerId: true },
+		})
+		const missingIds = snapshots
+			.map((snapshot) => snapshot.portalServerId)
+			.filter((id) => !currentIds.has(id))
+		const retainedIds = missingIds.filter((id) => configured.has(id))
+		const removedIds = missingIds.filter((id) => !configured.has(id))
+		if (retainedIds.length)
+			await tx.pclHomepageServerSnapshot.updateMany({
+				where: { portalServerId: { in: retainedIds } },
+				data: { missingAt: new Date() },
+			})
+		if (removedIds.length)
+			await tx.pclHomepageServerSnapshot.deleteMany({
+				where: { portalServerId: { in: removedIds } },
+			})
+	})
+
+	return servers
+}
+
+const findStoredServer = async (identifier: string) => {
 	const normalized = normalizeIdentifier(identifier)
 	if (!normalized) throw createApiError(400, 'PCL_HOMEPAGE_SERVER_REQUIRED')
-	const server = (await listPortalServers()).find((item) =>
-		[item.id, item.serverId, item.code, item.shortCode].some(
-			(value) => normalizeIdentifier(value) === normalized,
-		),
-	)
-	if (!server) throw createApiError(404, 'PCL_HOMEPAGE_SERVER_NOT_FOUND')
-	return server
+	const where = {
+		OR: [
+			{ portalServerId: { equals: normalized, mode: 'insensitive' as const } },
+			{ serverId: { equals: normalized, mode: 'insensitive' as const } },
+			{ code: { equals: normalized, mode: 'insensitive' as const } },
+			{ shortCode: { equals: normalized, mode: 'insensitive' as const } },
+		],
+	}
+	const server =
+		(await prisma.pclHomepageServerSnapshot.findFirst({
+			where: { ...where, missingAt: null },
+		})) ?? (await prisma.pclHomepageServerSnapshot.findFirst({ where }))
+	return server ? toPortalServer(server) : null
+}
+
+const resolvePclHomepageServer = async (identifier: string) => {
+	const stored = await findStoredServer(identifier)
+	if (stored) return stored
+
+	await synchronizePortalServers()
+	const synchronized = await findStoredServer(identifier)
+	if (!synchronized) throw createApiError(404, 'PCL_HOMEPAGE_SERVER_NOT_FOUND')
+	return synchronized
+}
+
+const resolveStoredPclHomepageServer = async (identifier: string) => {
+	const server = await findStoredServer(identifier)
+	if (server) return server
+
+	await synchronizePortalServers()
+	const synchronized = await findStoredServer(identifier)
+	if (!synchronized) throw createApiError(404, 'PCL_HOMEPAGE_SERVER_NOT_FOUND')
+	return synchronized
 }
 
 export const listPclHomepageServers = async (): Promise<
 	PclHomepageServer[]
 > => {
+	let portalAvailable = true
+	try {
+		await synchronizePortalServers()
+	} catch (error) {
+		portalAvailable = false
+		console.warn('PCL_HOMEPAGE_PORTAL_SYNC_FAILED', {
+			message: error instanceof Error ? error.message : 'Unknown error',
+		})
+	}
+
 	const [servers, homepages, requestCounts] = await Promise.all([
-		listPortalServers(),
+		prisma.pclHomepageServerSnapshot.findMany({ orderBy: { nameZhCn: 'asc' } }),
 		prisma.pclHomepage.findMany({ select: { portalServerId: true } }),
 		prisma.pclHomepageRequestDay.groupBy({
 			by: ['portalServerId'],
@@ -124,15 +248,19 @@ export const listPclHomepageServers = async (): Promise<
 			item._sum.requestCount ?? 0,
 		]),
 	)
-	return servers.map((server) => ({
-		...server,
-		configured: configured.has(server.id),
-		requestCount: requestCountByServer.get(server.id) ?? 0,
-	}))
+	return servers
+		.filter(
+			(server) => portalAvailable || configured.has(server.portalServerId),
+		)
+		.map((server) => ({
+			...toPortalServer(server),
+			configured: configured.has(server.portalServerId),
+			requestCount: requestCountByServer.get(server.portalServerId) ?? 0,
+		}))
 }
 
 export const getPclHomepageEditor = async (identifier: string) => {
-	const server = await resolvePortalServer(identifier)
+	const server = await resolvePclHomepageServer(identifier)
 	const homepage = await prisma.pclHomepage.findUnique({
 		where: { portalServerId: server.id },
 	})
@@ -144,7 +272,7 @@ export const savePclHomepage = async (
 	input: PclHomepageInput,
 	actorId: string,
 ) => {
-	const server = await resolvePortalServer(identifier)
+	const server = await resolvePclHomepageServer(identifier)
 	return prisma.$transaction(async (tx) => {
 		const homepage = await tx.pclHomepage.upsert({
 			where: { portalServerId: server.id },
@@ -225,10 +353,15 @@ const resolveVariables = async (
 	const [overview, latestClient] = await Promise.all([
 		fetchPortalJson<PortalLiveOverviewResponse>(
 			'/api/public/server/overview-live',
-		),
+		).catch((error) => {
+			console.warn('PCL_HOMEPAGE_LIVE_OVERVIEW_UNAVAILABLE', {
+				message: error instanceof Error ? error.message : 'Unknown error',
+			})
+			return null
+		}),
 		getLatestClientRelease(server),
 	])
-	const live = overview.servers.find(
+	const live = overview?.servers.find(
 		(item) => item.serverId === server.serverId,
 	)
 	return {
@@ -236,7 +369,9 @@ const resolveVariables = async (
 			? live.bridgeStatus.connected
 				? 'ONLINE'
 				: 'OFFLINE'
-			: server.status,
+			: overview
+				? server.status
+				: 'UNKNOWN',
 		onlinePlayers: String(live?.bridgeStatus.onlineCount ?? 0),
 		latestClientVersion: latestClient.version,
 		latestClientPublishedAt: latestClient.publishedAt,
@@ -263,7 +398,7 @@ const renderXaml = (xaml: string, variables: PclTemplateVariables) => {
 }
 
 export const renderPclHomepage = async (identifier: string) => {
-	const server = await resolvePortalServer(identifier)
+	const server = await resolveStoredPclHomepageServer(identifier)
 	const homepage = await prisma.pclHomepage.findUnique({
 		where: { portalServerId: server.id },
 	})
@@ -274,7 +409,7 @@ export const renderPclHomepage = async (identifier: string) => {
 	} catch (error) {
 		console.warn('PCL_HOMEPAGE_REQUEST_STATS_FAILED', {
 			portalServerId: server.id,
-			error,
+			message: error instanceof Error ? error.message : 'Unknown error',
 		})
 	}
 	return renderXaml(
