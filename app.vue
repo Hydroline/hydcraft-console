@@ -12,8 +12,18 @@ interface NuxtI18nApi {
 
 const toast = useToast()
 const nuxtApp = useNuxtApp()
+const route = useRoute()
 const { locale, t } = useI18n()
 const i18nApi = nuxtApp.$i18n as NuxtI18nApi
+const CONSOLE_TITLE = 'HydCraft Console'
+const routeTitleKeys: Record<string, string> = {
+	access: 'nav.access',
+	audit: 'nav.audit',
+	distribution: 'nav.distribution',
+	launcher: 'nav.pclHomepage',
+	releases: 'nav.releases',
+	settings: 'nav.settings',
+}
 const CHINESE_PRIMARY_LOCALES = new Set([
 	'zh',
 	'cmn',
@@ -166,6 +176,20 @@ const nuxtUiLocale = computed(
 			locale.value
 		] ?? zh_cn,
 )
+
+const pageTitle = computed(() => {
+	const topLevelRoute = route.path.split('/').filter(Boolean)[0]
+	const titleKey = topLevelRoute ? routeTitleKeys[topLevelRoute] : undefined
+
+	return titleKey ? `${t(titleKey)} / ${CONSOLE_TITLE}` : CONSOLE_TITLE
+})
+
+useHead(() => ({
+	title: pageTitle.value,
+	htmlAttrs: {
+		lang: locale.value,
+	},
+}))
 </script>
 
 <template>

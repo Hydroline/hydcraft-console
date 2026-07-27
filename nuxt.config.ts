@@ -10,7 +10,19 @@ export default defineNuxtConfig({
 		'~/assets/styles/base/tailwind.css',
 	],
 	vite: { plugins: [tailwindcss()] },
-	app: { pageTransition: { name: 'page', mode: 'out-in' } },
+	app: {
+		pageTransition: { name: 'page', mode: 'out-in' },
+		head: {
+			title: 'HydCraft Console',
+			link: [
+				{
+					rel: 'icon',
+					type: 'image/x-icon',
+					href: '/favicon.ico',
+				},
+			],
+		},
+	},
 	colorMode: {
 		preference: 'system',
 		storage: 'cookie',
