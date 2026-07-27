@@ -29,10 +29,10 @@ jobs:
       NUXT_OIDC_REDIRECT_URI: https://hydcraft.example/api/oidc/hydcraft/callback
       NUXT_SOURCE_SECRET_ENCRYPTION_KEY: ci-demo-source-encryption-key
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
 
