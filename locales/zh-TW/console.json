@@ -40,6 +40,7 @@
 		"signIn": "登入",
 		"oidcFailedTitle": "登入未完成",
 		"oidcErrors": {
+			"discoveryUnavailable": "Portal 身分服務暫時無法使用，請確認 Portal 已啟動後再試一次。",
 			"callbackInvalid": "登入回呼無效，請重新開始登入。",
 			"stateInvalid": "本次登入已過期或已被使用，請重新開始登入。",
 			"tokenExchangeFailed": "Portal 未能簽發 Console 登入憑證，請稍後重試。",
@@ -215,6 +216,7 @@
 	},
 	"errors": {
 		"invalidManifest": "Manifest 必須是有效 JSON 並符合 schemaVersion 1。",
-		"requestFailed": "請求未完成，請檢查權限、輸入或服務設定。"
+		"requestFailed": "請求未完成，請檢查權限、輸入或服務設定。",
+		"unexpected": "發生未知錯誤。"
 	}
 }

@@ -9,6 +9,10 @@ const themeMenuOpen = ref(false)
 const accountMenuOpen = ref(false)
 const collapsed = useState('console-sidebar-collapsed', () => false)
 const { data: me, refresh } = await useFetch('/api/auth/me')
+const { isStartingOidcLogin, startOidcLogin } = useHydcraftOidcLogin()
+const pageContentVisible = ref(true)
+let startPageContentFrame: number | undefined
+let revealPageContentFrame: number | undefined
 const user = computed(() => me.value?.identity)
 const authenticated = computed(() => Boolean(user.value))
 const profileUrl = computed(() =>
@@ -94,9 +98,36 @@ const logout = async () => {
 	if (!authenticated.value) return
 	await $fetch('/api/auth/logout', { method: 'POST' })
 	toast.add({ title: t('auth.signedOut'), color: 'success' })
+	accountMenuOpen.value = false
 	await refresh()
-	await navigateTo('/signed-out')
+	if (route.meta.public !== true) await navigateTo('/', { replace: true })
 }
+
+watch(
+	() => route.fullPath,
+	() => {
+		if (
+			!import.meta.client ||
+			window.matchMedia('(prefers-reduced-motion: reduce)').matches
+		)
+			return
+
+		if (startPageContentFrame) cancelAnimationFrame(startPageContentFrame)
+		if (revealPageContentFrame) cancelAnimationFrame(revealPageContentFrame)
+		pageContentVisible.value = false
+		startPageContentFrame = requestAnimationFrame(() => {
+			revealPageContentFrame = requestAnimationFrame(() => {
+				pageContentVisible.value = true
+			})
+		})
+	},
+	{ flush: 'pre' },
+)
+
+onBeforeUnmount(() => {
+	if (startPageContentFrame) cancelAnimationFrame(startPageContentFrame)
+	if (revealPageContentFrame) cancelAnimationFrame(revealPageContentFrame)
+})
 </script>
 
 <template>
@@ -267,12 +298,12 @@ const logout = async () => {
 					<div :class="collapsed ? 'order-first' : 'order-last'">
 						<UButton
 							v-if="!authenticated"
-							to="/api/oidc/hydcraft/login"
-							external
 							color="neutral"
 							variant="link"
 							size="xs"
 							class="px-2 text-sm whitespace-nowrap transition-opacity duration-200 hover:opacity-80"
+							:loading="isStartingOidcLogin"
+							@click="startOidcLogin"
 						>
 							{{ t('auth.signIn') }}
 						</UButton>
@@ -467,12 +498,12 @@ const logout = async () => {
 							</div>
 							<UButton
 								v-if="!authenticated"
-								to="/api/oidc/hydcraft/login"
-								external
 								color="neutral"
 								variant="link"
 								size="xs"
 								class="px-2 text-sm whitespace-nowrap transition-opacity duration-200 hover:opacity-80"
+								:loading="isStartingOidcLogin"
+								@click="startOidcLogin"
 								>{{ t('auth.signIn') }}</UButton
 							>
 							<UPopover
@@ -560,7 +591,16 @@ const logout = async () => {
 				collapsed ? 'lg:pl-[calc(5rem+3rem)]' : 'lg:pl-[calc(17.5rem+3rem)]'
 			"
 		>
-			<div class="mx-auto w-full max-w-[84rem]"><slot /></div>
+			<div
+				class="mx-auto w-full max-w-[84rem] transition-[opacity,transform] duration-300 ease-out motion-reduce:translate-y-0 motion-reduce:transition-none"
+				:class="
+					pageContentVisible
+						? 'translate-y-0 opacity-100'
+						: 'translate-y-2 opacity-0'
+				"
+			>
+				<slot />
+			</div>
 		</main>
 	</div>
 </template>

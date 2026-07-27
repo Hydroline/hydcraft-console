@@ -173,6 +173,8 @@ const nuxtUiLocale = computed(
 		:locale="nuxtUiLocale"
 		:toaster="{ position: 'top-right', ui: { viewport: 'z-[60000]' } }"
 	>
-		<NuxtLayout><NuxtPage /></NuxtLayout>
+		<NuxtLayout>
+			<NuxtPage :transition="{ name: 'page', mode: 'out-in' }" />
+		</NuxtLayout>
 	</UApp>
 </template>

@@ -40,6 +40,7 @@
 		"signIn": "ログイン",
 		"oidcFailedTitle": "ログインを完了できませんでした",
 		"oidcErrors": {
+			"discoveryUnavailable": "Portal の認証サービスを利用できません。Portal が起動していることを確認してから、もう一度お試しください。",
 			"callbackInvalid": "ログインコールバックが無効です。もう一度ログインを開始してください。",
 			"stateInvalid": "このログインセッションは期限切れか、すでに使用されています。もう一度ログインを開始してください。",
 			"tokenExchangeFailed": "Portal が Console のログイン認証情報を発行できませんでした。しばらくしてから再試行してください。",
@@ -219,6 +220,7 @@
 	},
 	"errors": {
 		"invalidManifest": "manifest は有効な JSON で schemaVersion 1 である必要があります。",
-		"requestFailed": "リクエストが完了しませんでした。権限、入力、サービス設定を確認してください。"
+		"requestFailed": "リクエストが完了しませんでした。権限、入力、サービス設定を確認してください。",
+		"unexpected": "予期しないエラーが発生しました。"
 	}
 }

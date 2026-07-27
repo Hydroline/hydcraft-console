@@ -57,8 +57,13 @@ const localizedName = (server: PclHomepageServer) => {
 				<template #nameZhCn-cell="{ row }">
 					<div>
 						<p class="font-medium">{{ localizedName(row.original) }}</p>
-						<p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-							{{ row.original.serverId }} · {{ row.original.code }}
+						<p
+							class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"
+						>
+							<span>{{ row.original.serverId }}</span>
+							<UBadge color="neutral" variant="subtle" size="xs">
+								{{ row.original.code }}
+							</UBadge>
 						</p>
 					</div>
 				</template>
@@ -77,7 +82,7 @@ const localizedName = (server: PclHomepageServer) => {
 					</UBadge>
 				</template>
 				<template #requestCount-cell="{ row }">
-					<div class="text-right tabular-nums">
+					<div class="tabular-nums">
 						{{ row.original.requestCount.toLocaleString() }}
 					</div>
 				</template>

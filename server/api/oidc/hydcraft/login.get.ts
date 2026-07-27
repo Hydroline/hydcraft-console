@@ -5,9 +5,10 @@ import { discoverOidc, pkceChallenge, pkceVerifier } from '../../../utils/oidc'
 
 export default defineEventHandler(async (event) => {
 	const config = useRuntimeConfig()
+	const query = getQuery(event)
 	const desktopRedirectUri =
-		typeof getQuery(event).desktop_redirect_uri === 'string'
-			? getQuery(event).desktop_redirect_uri
+		typeof query.desktop_redirect_uri === 'string'
+			? query.desktop_redirect_uri
 			: undefined
 	if (
 		desktopRedirectUri &&
@@ -16,6 +17,15 @@ export default defineEventHandler(async (event) => {
 		throw createApiError(400, 'DESKTOP_REDIRECT_URI_INVALID')
 	const state = randomBytes(32).toString('base64url')
 	const verifier = pkceVerifier()
+	let discovery
+	try {
+		discovery = await discoverOidc(String(config.hydrolineIssuer))
+	} catch (error) {
+		console.warn('OIDC_DISCOVERY_UNAVAILABLE', {
+			message: error instanceof Error ? error.message : 'Unknown error',
+		})
+		throw createApiError(502, 'OIDC_DISCOVERY_UNAVAILABLE')
+	}
 	await prisma.oidcLoginAttempt.create({
 		data: {
 			stateHash: createHash('sha256').update(state).digest('hex'),
@@ -24,7 +34,6 @@ export default defineEventHandler(async (event) => {
 			expiresAt: new Date(Date.now() + 10 * 60 * 1000),
 		},
 	})
-	const discovery = await discoverOidc(String(config.hydrolineIssuer))
 	const authorizationUrl = new URL(discovery.authorization_endpoint)
 	authorizationUrl.searchParams.set('response_type', 'code')
 	authorizationUrl.searchParams.set('client_id', String(config.oidcClientId))
@@ -41,5 +50,8 @@ export default defineEventHandler(async (event) => {
 	authorizationUrl.searchParams.set('state', state)
 	authorizationUrl.searchParams.set('code_challenge', pkceChallenge(verifier))
 	authorizationUrl.searchParams.set('code_challenge_method', 'S256')
+	if (query.response === 'json')
+		return { authorizationUrl: authorizationUrl.toString() }
+
 	return sendRedirect(event, authorizationUrl.toString())
 })

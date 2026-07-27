@@ -40,6 +40,7 @@
 		"signIn": "Sign in",
 		"oidcFailedTitle": "Sign-in was not completed",
 		"oidcErrors": {
+			"discoveryUnavailable": "The Portal identity service is unavailable. Confirm that Portal is running, then try again.",
 			"callbackInvalid": "The sign-in callback is invalid. Please start again.",
 			"stateInvalid": "This sign-in session has expired or was already used. Please start again.",
 			"tokenExchangeFailed": "Portal could not issue a Console sign-in credential. Please try again shortly.",
@@ -218,6 +219,7 @@
 	},
 	"errors": {
 		"invalidManifest": "The manifest must be valid JSON with schemaVersion 1.",
-		"requestFailed": "The request did not complete. Check permissions, input, and service configuration."
+		"requestFailed": "The request did not complete. Check permissions, input, and service configuration.",
+		"unexpected": "An unexpected error occurred."
 	}
 }

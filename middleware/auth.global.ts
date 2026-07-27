@@ -1,5 +1,5 @@
 export default defineNuxtRouteMiddleware(async (to) => {
-	if (to.meta.public === true || to.path === '/signed-out') return
+	if (to.meta.public === true) return
 	const { data, error } = await useFetch('/api/auth/me')
 	const identity = data.value?.identity
 	if (error.value || !identity) return navigateTo('/', { replace: true })

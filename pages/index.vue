@@ -8,6 +8,7 @@ const route = useRoute()
 const toast = useToast()
 const { data: me } = await useFetch('/api/auth/me')
 const authenticated = computed(() => Boolean(me.value?.identity))
+const { isStartingOidcLogin, startOidcLogin } = useHydcraftOidcLogin()
 
 const oidcFailureMessages = {
 	callback_invalid: 'auth.oidcErrors.callbackInvalid',
@@ -57,10 +58,12 @@ onMounted(async () => {
 				{{ t('home.subtitle') }}
 			</p>
 
-			<a
+			<button
 				v-if="!authenticated"
-				href="/api/oidc/hydcraft/login"
+				type="button"
 				class="group mt-10 w-full max-w-md cursor-pointer rounded-xl border border-slate-200 bg-white p-6 text-left shadow-sm transition-colors hover:bg-slate-900/80 hover:text-white dark:border-slate-800 dark:bg-slate-900"
+				:disabled="isStartingOidcLogin"
+				@click="startOidcLogin"
 			>
 				<div class="flex gap-3">
 					<div
@@ -81,7 +84,7 @@ onMounted(async () => {
 						</p>
 					</div>
 				</div>
-			</a>
+			</button>
 		</section>
 	</div>
 </template>
