@@ -59,7 +59,9 @@ export default defineNuxtConfig({
 			dlR2Cn: 'https://dl-r2-cn.hydcraft.cn',
 			dlShanghaiCdn: 'https://dl-shanghai-cdn.hydcraft.cn',
 		},
-		public: { consoleOrigin: 'http://localhost:3000' },
+		public: {
+			siteUrl: process.env.NUXT_PUBLIC_SITE_URL ?? 'http://localhost:3001',
+		},
 	},
 	ui: {
 		colorMode: true,
