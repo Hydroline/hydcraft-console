@@ -1,0 +1,48 @@
+main:
+  web_trigger_deploy:
+    - &production_deploy
+      name: 构建并部署生产环境
+      docker:
+        image: node:24-bookworm
+      imports:
+        - https://cnb.cool/HydCraft/hydcraft-secrets/-/blob/main/hydcraft-console-deploy.yml
+      stages:
+        - name: Build
+          script: |
+            set -eu
+            apt-get update
+            apt-get install -y --no-install-recommends openssh-client rsync
+            rm -rf /var/lib/apt/lists/*
+
+            export DATABASE_URL='postgresql://postgres:postgres@localhost:5432/hydcraft_console?schema=public'
+            export NUXT_DATABASE_URL="$DATABASE_URL"
+            export NUXT_SESSION_SECRET='ci-demo-session-secret'
+            export NUXT_HYDROLINE_ISSUER='https://hydcraft.example'
+            export NUXT_OIDC_CLIENT_ID='ci-demo-client'
+            export NUXT_OIDC_CLIENT_SECRET='ci-demo-client-secret'
+            export NUXT_OIDC_REDIRECT_URI='https://hydcraft.example/api/oidc/hydcraft/callback'
+            export NUXT_SOURCE_SECRET_ENCRYPTION_KEY='ci-demo-source-encryption-key'
+
+            corepack enable
+            corepack prepare pnpm@10.14.0 --activate
+            pnpm install --frozen-lockfile
+            pnpm prisma:generate
+            pnpm build
+
+            rm -rf deploy-artifact
+            mkdir -p deploy-artifact
+            cp package.json pnpm-lock.yaml prisma.config.ts deploy-artifact/
+            cp -R prisma .output deploy-artifact/
+            pnpm install --prod --frozen-lockfile --dir deploy-artifact
+
+            test -f deploy-artifact/.output/server/index.mjs
+            test -f deploy-artifact/prisma.config.ts
+            test -f deploy-artifact/prisma/schema/migrations/migration_lock.toml
+            test -f deploy-artifact/node_modules/.bin/prisma
+
+        - name: Deploy
+          script: bash ./.cnb/scripts/deploy-production.sh
+
+  api_trigger_deploy:
+    - <<: *production_deploy
+      name: API 构建并部署生产环境
