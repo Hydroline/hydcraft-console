@@ -5,7 +5,11 @@ interface UpdaterRelease {
 	version: string
 	revision: number
 	status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
-	manifest: Record<string, unknown>
+	manifest: {
+		commitSha?: string
+		platform?: 'windows-x86_64' | 'macos-universal'
+	}
+	publishedAt: string | null
 }
 interface Migration {
 	id: string
@@ -38,7 +42,7 @@ interface ManifestContributor {
 	avatarUrl: string | null
 }
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const toast = useToast()
 const {
 	data: releases,
@@ -103,12 +107,19 @@ const columns = computed(() =>
 					{ id: 'actions', header: '' },
 				]
 			: [
+					{ id: 'commitSha', header: t('release.commit') },
 					{ accessorKey: 'version', header: t('release.version') },
-					{ accessorKey: 'revision', header: t('release.revision') },
+					{ id: 'platform', header: t('release.platform') },
+					{ accessorKey: 'publishedAt', header: t('release.publishedAt') },
 					{ accessorKey: 'status', header: t('release.status') },
 					{ id: 'actions', header: '' },
 				],
 )
+const formatDate = (value: string): string =>
+	new Intl.DateTimeFormat(locale.value, {
+		dateStyle: 'short',
+		timeStyle: 'short',
+	}).format(new Date(value))
 watch(selectedKind, () => {
 	page.value = 1
 })
@@ -266,12 +277,6 @@ const saveClientEditorial = async () => {
 				<h1 class="text-3xl font-semibold tracking-tight">
 					{{ t('release.title') }}
 				</h1>
-				<p
-					v-if="selectedKind === 'UPDATER'"
-					class="mt-2 text-sm text-slate-500 dark:text-slate-400"
-				>
-					{{ t('release.updaterNotice') }}
-				</p>
 			</div>
 			<UButton
 				v-if="selectedKind === 'UPDATER'"
@@ -317,8 +322,20 @@ const saveClientEditorial = async () => {
 					><span class="text-xs">{{ row.original.packageKey }}</span></template
 				><template #version-cell="{ row }"
 					><span class="">{{ row.original.version }}</span></template
-				><template #revision-cell="{ row }"
-					>#{{ row.original.revision }}</template
+				><template #commitSha-cell="{ row }"
+					><code class="text-xs">{{
+						row.original.manifest.commitSha || '—'
+					}}</code></template
+				><template #platform-cell="{ row }"
+					><code class="text-xs">{{
+						row.original.manifest.platform || '—'
+					}}</code></template
+				><template #publishedAt-cell="{ row }"
+					><span>{{
+						row.original.publishedAt
+							? formatDate(row.original.publishedAt)
+							: '—'
+					}}</span></template
 				><template #status-cell="{ row }"
 					><UBadge
 						:color="
@@ -342,13 +359,6 @@ const saveClientEditorial = async () => {
 							>{{ t('release.editClient') }}</UButton
 						>
 						<UButton
-							v-if="selectedKind === 'UPDATER'"
-							size="xs"
-							color="neutral"
-							variant="ghost"
-							:to="`/releases/${row.original.id}`"
-							>{{ t('release.details') }}</UButton
-						><UButton
 							v-if="row.original.status === 'DRAFT'"
 							size="xs"
 							color="primary"
