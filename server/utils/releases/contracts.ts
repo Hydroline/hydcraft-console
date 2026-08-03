@@ -19,6 +19,11 @@ export const safeRelativePath = z
 		'RELEASE_PATH_INVALID',
 	)
 
+const updaterObjectKey = safeRelativePath.refine(
+	(value) => value === 'updater' || value.startsWith('updater/'),
+	'UPDATER_OBJECT_PATH_INVALID',
+)
+
 export const accessPolicySchema = z.object({
 	requiresLogin: z.boolean().default(false),
 	minimumRole: z.enum(['USER', 'ADMIN', 'OWNER']).optional(),
@@ -34,4 +39,21 @@ export const updaterManifestSchema = z.object({
 	platform: z.enum(['windows-x86_64', 'macos-universal']),
 	urls: z.array(z.string().url()).min(1),
 	sha256: z.string().regex(/^[a-f0-9]{64}$/i),
+	commitSha: z
+		.string()
+		.regex(/^[a-f0-9]{7,64}$/i)
+		.optional(),
+	objectKey: updaterObjectKey.optional(),
+	size: z.number().int().nonnegative().optional(),
+})
+
+export const updaterArtifactInputSchema = z.object({
+	version: z
+		.string()
+		.regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/),
+	commitSha: z.string().regex(/^[a-f0-9]{7,64}$/i),
+	platform: z.enum(['windows-x86_64', 'macos-universal']),
+	objectKey: updaterObjectKey,
+	sha256: z.string().regex(/^[a-f0-9]{64}$/i),
+	size: z.number().int().nonnegative(),
 })

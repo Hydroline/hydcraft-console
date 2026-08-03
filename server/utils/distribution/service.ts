@@ -37,12 +37,15 @@ const sourcePolicyInputSchema = z.discriminatedUnion('sourceDelivery', [
 	}),
 ])
 
+const sourceScope = z.enum(['CLIENT', 'UPDATER'])
+
 export const distributionInputSchema = z.discriminatedUnion('type', [
 	z.object({
 		type: z.literal('source'),
 		key: z.string().regex(/^[a-z0-9-]+$/),
 		labels,
 		baseUrl: z.string().url(),
+		scope: sourceScope.default('CLIENT'),
 		priority: z.number().int(),
 		isDefault: z.boolean().default(false),
 		enabled: z.boolean(),
@@ -85,7 +88,8 @@ export const saveDistribution = async (
 ) =>
 	prisma.$transaction(async (tx) => {
 		if (input.type === 'source') {
-			if (input.isDefault) {
+			const isDefault = input.scope === 'CLIENT' && input.isDefault
+			if (isDefault) {
 				await tx.distributionSource.updateMany({
 					where: { isDefault: true, key: { not: input.key } },
 					data: { isDefault: false },
@@ -108,16 +112,18 @@ export const saveDistribution = async (
 					key: input.key,
 					labels: input.labels,
 					baseUrl: input.baseUrl,
+					scope: input.scope,
 					priority: input.priority,
-					isDefault: input.isDefault,
+					isDefault,
 					enabled: input.enabled,
 					policy,
 				},
 				update: {
 					labels: input.labels,
 					baseUrl: input.baseUrl,
+					scope: input.scope,
 					priority: input.priority,
-					isDefault: input.isDefault,
+					isDefault,
 					enabled: input.enabled,
 					policy,
 				},
@@ -156,7 +162,11 @@ export const saveDistribution = async (
 				where: { key: { in: input.entitlements }, enabled: true },
 			}),
 			tx.distributionSource.count({
-				where: { id: { in: input.sourceIds }, enabled: true },
+				where: {
+					id: { in: input.sourceIds },
+					enabled: true,
+					scope: 'CLIENT',
+				},
 			}),
 		])
 		if (definitions !== input.entitlements.length)

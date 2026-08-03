@@ -4,6 +4,7 @@ interface Source {
 	key: string
 	labels: Record<string, string>
 	baseUrl: string
+	scope: 'CLIENT' | 'UPDATER'
 	priority: number
 	isDefault: boolean
 	enabled: boolean
@@ -52,6 +53,7 @@ const source = reactive({
 	key: '',
 	label: '',
 	baseUrl: '',
+	scope: 'CLIENT' as 'CLIENT' | 'UPDATER',
 	priority: 0,
 	isDefault: false,
 	sourceDelivery: 'public' as 'public' | 'edgeone',
@@ -106,6 +108,7 @@ const sourceColumns = [
 	{ accessorKey: 'key', header: t('distribution.key') },
 	{ accessorKey: 'label', header: t('distribution.labelZhCn') },
 	{ accessorKey: 'baseUrl', header: t('distribution.baseUrl') },
+	{ accessorKey: 'scope', header: t('distribution.scope') },
 	{ accessorKey: 'priority', header: t('distribution.priority') },
 	{ accessorKey: 'status', header: t('release.status') },
 	{ id: 'actions', header: '' },
@@ -128,6 +131,7 @@ const resetSource = (): void => {
 		key: '',
 		label: '',
 		baseUrl: '',
+		scope: 'CLIENT',
 		priority: 0,
 		isDefault: false,
 		sourceDelivery: 'public',
@@ -148,6 +152,7 @@ const openSourceEditor = (existing?: Source): void => {
 		key: existing.key,
 		label: existing.labels['zh-CN'] ?? existing.key,
 		baseUrl: existing.baseUrl,
+		scope: existing.scope ?? 'CLIENT',
 		priority: existing.priority,
 		isDefault: existing.isDefault,
 		sourceDelivery: existing.policy?.sourceDelivery ?? 'public',
@@ -182,6 +187,7 @@ const saveSource = async () => {
 				key: source.key,
 				labels: { 'zh-CN': source.label },
 				baseUrl: source.baseUrl,
+				scope: source.scope,
 				priority: Number(source.priority),
 				isDefault: source.isDefault,
 				enabled: true,
@@ -350,6 +356,11 @@ const setPageSize = (value: number): void => {
 				</template>
 				<template #baseUrl-cell="{ row }">
 					<span class="text-xs">{{ row.original.baseUrl }}</span>
+				</template>
+				<template #scope-cell="{ row }">
+					<UBadge color="neutral" variant="subtle" size="xs">
+						{{ row.original.scope }}
+					</UBadge>
 				</template>
 				<template #status-cell="{ row }">
 					<UBadge
@@ -520,6 +531,16 @@ const setPageSize = (value: number): void => {
 							class="w-full"
 						/>
 					</UFormField>
+					<UFormField :label="t('distribution.scope')">
+						<USelect
+							v-model="source.scope"
+							:items="[
+								{ label: t('distribution.clientScope'), value: 'CLIENT' },
+								{ label: t('distribution.updaterScope'), value: 'UPDATER' },
+							]"
+							class="w-full"
+						/>
+					</UFormField>
 					<template v-if="source.sourceDelivery === 'edgeone'">
 						<UFormField :label="t('distribution.edgeoneSigningKey')">
 							<UInput
@@ -555,6 +576,7 @@ const setPageSize = (value: number): void => {
 					/></UFormField>
 					<UCheckbox
 						v-model="source.isDefault"
+						:disabled="source.scope === 'UPDATER'"
 						:label="t('distribution.defaultSource')"
 					/>
 					<div class="flex justify-end gap-2">

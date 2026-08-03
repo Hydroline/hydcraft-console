@@ -208,7 +208,7 @@ export const listUpdaterSources = async (
 	locale = 'zh-CN',
 ): Promise<UpdaterSource[]> => {
 	const sources = await prisma.distributionSource.findMany({
-		where: { enabled: true },
+		where: { enabled: true, scope: 'CLIENT' },
 		orderBy: { priority: 'asc' },
 		select: {
 			key: true,
@@ -237,7 +237,7 @@ export const resolveUpdaterSourceProbeTarget = async (
 	key: string,
 ): Promise<UpdaterSourceProbeTarget | null> => {
 	const source = await prisma.distributionSource.findFirst({
-		where: { key, enabled: true },
+		where: { key, enabled: true, scope: 'CLIENT' },
 		select: { baseUrl: true, policy: true },
 	})
 	if (!source) return null
@@ -366,7 +366,7 @@ const resolvePackageSources = async (
 	sourceKey?: string,
 ) => {
 	const sources = await prisma.distributionSource.findMany({
-		where: { enabled: true },
+		where: { enabled: true, scope: 'CLIENT' },
 		orderBy: { priority: 'asc' },
 		select: { key: true, baseUrl: true, policy: true },
 	})
