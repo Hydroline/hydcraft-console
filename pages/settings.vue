@@ -13,8 +13,11 @@ interface Configuration {
 	sourceSecretEncryptionConfigured: boolean
 }
 
+type SettingsSection = 'configuration' | 'tokens'
+
 const { t } = useI18n()
 const toast = useToast()
+const route = useRoute()
 const { data, refresh, status } = await useFetch<{
 	tokens: Token[]
 	configuration: Configuration
@@ -22,6 +25,9 @@ const { data, refresh, status } = await useFetch<{
 const open = ref(false)
 const name = ref('')
 const createdToken = ref('')
+const activeSection = computed<SettingsSection>(() =>
+	route.query.section === 'tokens' ? 'tokens' : 'configuration',
+)
 const page = ref(1)
 const pageSize = ref(20)
 const configurationRows = computed(() =>
@@ -51,6 +57,16 @@ const tokenColumns = [
 const setPageSize = (value: number): void => {
 	pageSize.value = value
 	page.value = 1
+}
+const selectSection = async (section: SettingsSection): Promise<void> => {
+	if (route.query.section === section) return
+	await navigateTo(
+		{
+			path: route.path,
+			query: { ...route.query, section },
+		},
+		{ replace: true },
+	)
 }
 const create = async () => {
 	try {
@@ -83,93 +99,139 @@ const revoke = async (id: string) => {
 			<div>
 				<h1 class="text-3xl font-semibold">{{ t('settings.title') }}</h1>
 			</div>
-			<UButton color="primary" icon="i-lucide-key-round" @click="open = true">
-				{{ t('settings.newToken') }}
+			<Transition name="console-section-action" mode="out-in">
+				<UButton
+					v-if="activeSection === 'tokens'"
+					key="tokens-action"
+					color="primary"
+					icon="i-lucide-key-round"
+					@click="open = true"
+				>
+					{{ t('settings.newToken') }}
+				</UButton>
+				<span v-else key="empty-action" class="h-8" aria-hidden="true" />
+			</Transition>
+		</div>
+
+		<div
+			class="flex flex-wrap gap-2"
+			role="tablist"
+			:aria-label="t('settings.title')"
+		>
+			<UButton
+				:color="activeSection === 'configuration' ? 'primary' : 'neutral'"
+				:variant="activeSection === 'configuration' ? 'solid' : 'soft'"
+				class="transition-colors duration-300"
+				role="tab"
+				:aria-selected="activeSection === 'configuration'"
+				@click="selectSection('configuration')"
+			>
+				{{ t('settings.configuration') }}
+			</UButton>
+			<UButton
+				:color="activeSection === 'tokens' ? 'primary' : 'neutral'"
+				:variant="activeSection === 'tokens' ? 'solid' : 'soft'"
+				class="transition-colors duration-300"
+				role="tab"
+				:aria-selected="activeSection === 'tokens'"
+				@click="selectSection('tokens')"
+			>
+				{{ t('settings.publishTokens') }}
 			</UButton>
 		</div>
 
-		<div
-			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
-		>
-			<UTable
-				:data="configurationRows"
-				:columns="configurationColumns"
-				:loading="status === 'pending'"
-				class="min-h-48 min-w-full"
-			>
-				<template #value-cell="{ row }">
-					<UBadge
-						:color="row.original.value ? 'success' : 'error'"
-						variant="subtle"
+		<div class="relative isolate">
+			<Transition name="console-section" :duration="{ enter: 360, leave: 240 }">
+				<div
+					v-if="activeSection === 'configuration'"
+					:key="activeSection"
+					class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+					role="tabpanel"
+				>
+					<UTable
+						:data="configurationRows"
+						:columns="configurationColumns"
+						:loading="status === 'pending'"
+						class="min-h-48 min-w-full"
 					>
-						{{
-							row.original.value
-								? t('settings.configured')
-								: t('settings.missing')
-						}}
-					</UBadge>
-				</template>
-				<template #empty>{{ t('settings.emptyConfiguration') }}</template>
-			</UTable>
-		</div>
+						<template #value-cell="{ row }">
+							<UBadge
+								:color="row.original.value ? 'success' : 'error'"
+								variant="subtle"
+							>
+								{{
+									row.original.value
+										? t('settings.configured')
+										: t('settings.missing')
+								}}
+							</UBadge>
+						</template>
+						<template #empty>{{ t('settings.emptyConfiguration') }}</template>
+					</UTable>
+				</div>
 
-		<div
-			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
-		>
-			<UTable
-				:data="paginatedTokens"
-				:columns="tokenColumns"
-				:loading="status === 'pending'"
-				class="min-h-72 min-w-full"
-			>
-				<template #scopes-cell="{ row }">
-					<div class="flex flex-wrap gap-1">
-						<UBadge
-							v-for="scope in row.original.scopes"
-							:key="scope"
-							color="neutral"
-							variant="soft"
-						>
-							{{ scope }}
-						</UBadge>
-					</div>
-				</template>
-				<template #status-cell="{ row }">
-					<UBadge
-						:color="row.original.revokedAt ? 'error' : 'success'"
-						variant="subtle"
+				<div
+					v-else
+					:key="activeSection"
+					class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+					role="tabpanel"
+				>
+					<UTable
+						:data="paginatedTokens"
+						:columns="tokenColumns"
+						:loading="status === 'pending'"
+						class="min-h-72 min-w-full"
 					>
-						{{
-							row.original.revokedAt
-								? t('settings.revoked')
-								: t('settings.active')
-						}}
-					</UBadge>
-				</template>
-				<template #createdAt-cell="{ row }">
-					{{ new Date(row.original.createdAt).toLocaleString() }}
-				</template>
-				<template #actions-cell="{ row }">
-					<UButton
-						v-if="!row.original.revokedAt"
-						size="xs"
-						color="error"
-						variant="soft"
-						@click="revoke(row.original.id)"
-					>
-						{{ t('settings.revoke') }}
-					</UButton>
-				</template>
-				<template #empty>{{ t('settings.emptyTokens') }}</template>
-			</UTable>
-			<ConsoleTablePagination
-				:page="page"
-				:page-size="pageSize"
-				:total="data?.tokens.length ?? 0"
-				:page-count="pageCount"
-				@update:page="page = $event"
-				@update:page-size="setPageSize"
-			/>
+						<template #scopes-cell="{ row }">
+							<div class="flex flex-wrap gap-1">
+								<UBadge
+									v-for="scope in row.original.scopes"
+									:key="scope"
+									color="neutral"
+									variant="soft"
+								>
+									{{ scope }}
+								</UBadge>
+							</div>
+						</template>
+						<template #status-cell="{ row }">
+							<UBadge
+								:color="row.original.revokedAt ? 'error' : 'success'"
+								variant="subtle"
+							>
+								{{
+									row.original.revokedAt
+										? t('settings.revoked')
+										: t('settings.active')
+								}}
+							</UBadge>
+						</template>
+						<template #createdAt-cell="{ row }">
+							{{ new Date(row.original.createdAt).toLocaleString() }}
+						</template>
+						<template #actions-cell="{ row }">
+							<UButton
+								v-if="!row.original.revokedAt"
+								size="xs"
+								color="error"
+								variant="soft"
+								@click="revoke(row.original.id)"
+							>
+								{{ t('settings.revoke') }}
+							</UButton>
+						</template>
+						<template #empty>{{ t('settings.emptyTokens') }}</template>
+					</UTable>
+					<ConsoleTablePagination
+						:page="page"
+						:page-size="pageSize"
+						:total="data?.tokens.length ?? 0"
+						:page-count="pageCount"
+						@update:page="page = $event"
+						@update:page-size="setPageSize"
+					/>
+				</div>
+			</Transition>
 		</div>
 
 		<UModal v-model:open="open" :title="t('settings.newToken')">

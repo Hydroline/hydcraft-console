@@ -12,6 +12,23 @@ import type { PortalDirectoryUser } from '../portal/directory'
 
 export const clientTestEntitlement = 'client-test'
 
+const clientTestEntitlementLabels = {
+	'zh-CN': '客户端测试组',
+	'zh-TW': '客戶端測試組',
+	'en-US': 'Client test group',
+	'ja-JP': 'クライアントテストグループ',
+}
+
+export const ensureClientTestEntitlement = async () =>
+	prisma.entitlementDefinition.upsert({
+		where: { key: clientTestEntitlement },
+		create: {
+			key: clientTestEntitlement,
+			labels: clientTestEntitlementLabels,
+		},
+		update: {},
+	})
+
 type LocalizedLabels = Record<string, unknown>
 
 export interface UpdaterVersion {

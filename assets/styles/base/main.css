@@ -180,6 +180,40 @@ body {
 	transform: translateY(0);
 }
 
+.console-section-enter-active {
+	transition: opacity 360ms ease-out;
+}
+
+.console-section-leave-active {
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: 1;
+	width: 100%;
+	pointer-events: none;
+	transition: opacity 240ms ease-out;
+}
+
+.console-section-enter-from,
+.console-section-leave-to {
+	opacity: 0;
+}
+
+.console-section-enter-to,
+.console-section-leave-from {
+	opacity: 1;
+}
+
+.console-section-action-enter-active,
+.console-section-action-leave-active {
+	transition: opacity 220ms ease;
+}
+
+.console-section-action-enter-from,
+.console-section-action-leave-to {
+	opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.page-enter-active,
 	.page-leave-active {
@@ -210,10 +244,19 @@ body {
 		transition: none;
 	}
 
+	.console-section-enter-active,
+	.console-section-leave-active {
+		transition: none;
+	}
+
 	.markdown-locale-enter-from,
 	.markdown-locale-leave-to,
 	.markdown-locale-enter-to,
-	.markdown-locale-leave-from {
+	.markdown-locale-leave-from,
+	.console-section-enter-from,
+	.console-section-leave-to,
+	.console-section-enter-to,
+	.console-section-leave-from {
 		filter: none;
 		transform: none;
 	}

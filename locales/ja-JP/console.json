@@ -190,6 +190,7 @@
 		"revoked": "取り消し済み",
 		"active": "有効",
 		"configuration": "設定項目",
+		"publishTokens": "公開トークン",
 		"value": "状態",
 		"scopes": "スコープ",
 		"createdAt": "作成日時",

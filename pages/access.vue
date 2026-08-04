@@ -28,6 +28,7 @@ const pageSize = ref(20)
 const searched = ref(false)
 const selected = ref<DirectoryUser | null>(null)
 const selectedKeys = ref<string[]>([])
+const accessEditorOpen = ref(false)
 const { data: definitions } = await useFetch<{ entitlements: Entitlement[] }>(
 	'/api/admin/distribution',
 )
@@ -74,6 +75,7 @@ const setPageSize = async (value: number): Promise<void> => {
 const selectUser = (user: DirectoryUser): void => {
 	selected.value = user
 	selectedKeys.value = []
+	accessEditorOpen.value = true
 }
 const setEntitlementGranted = (key: string, granted: boolean): void => {
 	selectedKeys.value = granted
@@ -87,6 +89,7 @@ const save = async () => {
 			method: 'POST',
 			body: { subject: selected.value, entitlementKeys: selectedKeys.value },
 		})
+		accessEditorOpen.value = false
 		toast.add({ title: t('access.saved'), color: 'success' })
 	} catch {
 		toast.add({ title: t('errors.requestFailed'), color: 'error' })
@@ -180,50 +183,59 @@ const save = async () => {
 			/>
 		</div>
 
-		<div
-			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
-		>
-			<div class="border-b border-slate-200 p-5 dark:border-slate-800">
-				<h2 class="font-medium">
-					{{
-						selected?.displayName ||
-						selected?.username ||
-						t('access.selectUser')
-					}}
-				</h2>
-				<p
-					v-if="selected"
-					class="mt-1 text-xs text-slate-500 dark:text-slate-400"
-				>
-					{{ selected.hydrolineId }}
-				</p>
-			</div>
-			<UTable
-				:data="selected ? (definitions?.entitlements ?? []) : []"
-				:columns="entitlementColumns"
-				class="min-h-48 min-w-full"
-			>
-				<template #label-cell="{ row }">
-					{{ row.original.labels['zh-CN'] || row.original.key }}
-				</template>
-				<template #actions-cell="{ row }">
-					<UCheckbox
-						:model-value="selectedKeys.includes(row.original.key)"
-						:value="row.original.key"
-						:label="t('access.grant')"
-						@update:model-value="
-							setEntitlementGranted(row.original.key, $event === true)
-						"
-					/>
-				</template>
-				<template #empty>{{ t('access.selectUser') }}</template>
-			</UTable>
-			<div
-				v-if="selected"
-				class="flex justify-end border-t border-slate-200 p-4 dark:border-slate-800"
-			>
-				<UButton color="primary" @click="save">{{ t('actions.save') }}</UButton>
-			</div>
-		</div>
+		<UModal v-model:open="accessEditorOpen" :title="t('access.title')">
+			<template #body>
+				<div v-if="selected" class="space-y-5">
+					<div
+						class="flex items-center gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+					>
+						<UAvatar
+							:src="selected.avatarUrl || undefined"
+							:alt="selected.username"
+						/>
+						<div class="min-w-0">
+							<p class="truncate font-medium">
+								{{ selected.displayName || selected.username }}
+							</p>
+							<p class="truncate text-xs text-slate-500 dark:text-slate-400">
+								{{ selected.hydrolineId }}
+							</p>
+						</div>
+					</div>
+					<UTable
+						:data="definitions?.entitlements ?? []"
+						:columns="entitlementColumns"
+						class="min-w-full"
+					>
+						<template #label-cell="{ row }">
+							{{ row.original.labels['zh-CN'] || row.original.key }}
+						</template>
+						<template #actions-cell="{ row }">
+							<UCheckbox
+								:model-value="selectedKeys.includes(row.original.key)"
+								:value="row.original.key"
+								:label="t('access.grant')"
+								@update:model-value="
+									setEntitlementGranted(row.original.key, $event === true)
+								"
+							/>
+						</template>
+						<template #empty>{{ t('access.selectUser') }}</template>
+					</UTable>
+					<div class="flex justify-end gap-2">
+						<UButton
+							color="neutral"
+							variant="ghost"
+							@click="accessEditorOpen = false"
+						>
+							{{ t('actions.cancel') }}
+						</UButton>
+						<UButton color="primary" @click="save">
+							{{ t('actions.save') }}
+						</UButton>
+					</div>
+				</div>
+			</template>
+		</UModal>
 	</section>
 </template>

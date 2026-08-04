@@ -190,6 +190,7 @@
 		"revoked": "已撤銷",
 		"active": "有效",
 		"configuration": "設定項目",
+		"publishTokens": "發布權杖",
 		"value": "狀態",
 		"scopes": "範圍",
 		"createdAt": "建立時間",

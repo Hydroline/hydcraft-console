@@ -189,6 +189,7 @@
 		"revoked": "Revoked",
 		"active": "Active",
 		"configuration": "Configuration",
+		"publishTokens": "Publish tokens",
 		"requestCount": "Requests (7 days)",
 		"value": "Status",
 		"scopes": "Scopes",

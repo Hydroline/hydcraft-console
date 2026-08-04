@@ -197,6 +197,7 @@
 		"revoked": "已撤销",
 		"active": "有效",
 		"configuration": "配置项",
+		"publishTokens": "发布令牌",
 		"value": "状态",
 		"scopes": "范围",
 		"createdAt": "创建时间",

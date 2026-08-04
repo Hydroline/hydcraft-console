@@ -44,8 +44,12 @@ interface ManifestContributor {
 	avatarUrl: string | null
 }
 
+type ReleaseKind = 'MIGRATION' | 'CLIENT' | 'UPDATER'
+type ReleaseSection = 'migrations' | 'client' | 'updater'
+
 const { t, locale } = useI18n()
 const toast = useToast()
+const route = useRoute()
 const {
 	data: releases,
 	status,
@@ -57,7 +61,13 @@ const { data: migrations, refresh: refreshMigrations } = await useFetch<
 const { data: clientReleases, refresh: refreshClientReleases } = await useFetch<
 	ClientRelease[]
 >('/api/admin/client-releases')
-const selectedKind = ref<'MIGRATION' | 'CLIENT' | 'UPDATER'>('MIGRATION')
+const selectedKind = computed<ReleaseKind>(() =>
+	route.query.section === 'client'
+		? 'CLIENT'
+		: route.query.section === 'updater'
+			? 'UPDATER'
+			: 'MIGRATION',
+)
 const open = ref(false)
 const clientEditorOpen = ref(false)
 const editingClientRelease = ref<ClientRelease | null>(null)
@@ -127,6 +137,16 @@ const migrationStatus = (migration: Migration) =>
 watch(selectedKind, () => {
 	page.value = 1
 })
+const selectSection = async (section: ReleaseSection): Promise<void> => {
+	if (route.query.section === section) return
+	await navigateTo(
+		{
+			path: route.path,
+			query: { ...route.query, section },
+		},
+		{ replace: true },
+	)
+}
 const create = async () => {
 	try {
 		const manifest = advanced.value
@@ -282,127 +302,143 @@ const saveClientEditorial = async () => {
 					{{ t('release.title') }}
 				</h1>
 			</div>
-			<UButton
-				v-if="selectedKind === 'UPDATER'"
-				color="primary"
-				icon="i-lucide-plus"
-				@click="open = true"
-				>{{ t('release.newDraft') }}</UButton
-			>
+			<Transition name="console-section-action" mode="out-in">
+				<UButton
+					v-if="selectedKind === 'UPDATER'"
+					key="updater-action"
+					color="primary"
+					icon="i-lucide-plus"
+					@click="open = true"
+					>{{ t('release.newDraft') }}</UButton
+				>
+				<span v-else key="empty-action" class="h-8" aria-hidden="true" />
+			</Transition>
 		</div>
 		<div class="flex gap-2">
 			<UButton
 				color="primary"
 				:variant="selectedKind === 'MIGRATION' ? 'solid' : 'soft'"
-				@click="selectedKind = 'MIGRATION'"
+				class="transition-colors duration-300"
+				@click="selectSection('migrations')"
 				>{{ t('release.migrations') }}</UButton
 			><UButton
 				color="primary"
 				:variant="selectedKind === 'CLIENT' ? 'solid' : 'soft'"
-				@click="selectedKind = 'CLIENT'"
+				class="transition-colors duration-300"
+				@click="selectSection('client')"
 				>{{ t('release.client') }}</UButton
 			><UButton
 				color="primary"
 				:variant="selectedKind === 'UPDATER' ? 'solid' : 'soft'"
-				@click="selectedKind = 'UPDATER'"
+				class="transition-colors duration-300"
+				@click="selectSection('updater')"
 				>{{ t('release.updater') }}</UButton
 			>
 		</div>
-		<div
-			class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
-		>
-			<UTable
-				:data="paginated"
-				:columns="columns"
-				:loading="status === 'pending'"
-				class="min-h-72 min-w-full"
-				><template #fromRelease-cell="{ row }"
-					><span class="">{{
-						row.original.fromRelease.version
-					}}</span></template
-				><template #toRelease-cell="{ row }"
-					><span class="">{{ row.original.toRelease.version }}</span></template
-				><template #packageKey-cell="{ row }"
-					><span class="text-xs">{{ row.original.packageKey }}</span></template
-				><template #version-cell="{ row }"
-					><span class="">{{ row.original.version }}</span></template
-				><template #commitSha-cell="{ row }"
-					><code class="text-xs">{{
-						row.original.manifest.commitSha || '—'
-					}}</code></template
-				><template #platform-cell="{ row }"
-					><code class="text-xs">{{
-						row.original.manifest.platform || '—'
-					}}</code></template
-				><template #publishedAt-cell="{ row }"
-					><span>{{
-						row.original.publishedAt
-							? formatDate(row.original.publishedAt)
-							: '—'
-					}}</span></template
-				><template #status-cell="{ row }"
-					><UBadge
-						:color="
-							(selectedKind === 'MIGRATION'
-								? migrationStatus(row.original)
-								: row.original.status) === 'PUBLISHED'
-								? 'success'
-								: (selectedKind === 'MIGRATION'
-											? migrationStatus(row.original)
-											: row.original.status) === 'TESTING' ||
-									  (selectedKind === 'MIGRATION'
-											? migrationStatus(row.original)
-											: row.original.status) === 'DRAFT'
-									? 'warning'
-									: 'neutral'
-						"
-						variant="subtle"
-						>{{
-							selectedKind === 'MIGRATION'
-								? t(`status.${migrationStatus(row.original)}`)
-								: t(`status.${row.original.status}`)
-						}}</UBadge
-					><span
-						v-if="
-							selectedKind === 'MIGRATION' &&
-							row.original.candidateState === 'TESTING'
-						"
-						class="ml-2 text-xs text-slate-500 dark:text-slate-400"
-						>r{{ row.original.candidateRevision }}</span
-					>
-					></template
-				><template #actions-cell="{ row }"
-					><div class="flex justify-end gap-2">
-						<UButton
-							v-if="selectedKind === 'CLIENT'"
-							size="xs"
-							color="neutral"
-							variant="soft"
-							@click="openClientEditor(row.original)"
-							>{{ t('release.editClient') }}</UButton
-						>
-						<UButton
-							v-if="
-								row.original.status === 'DRAFT' &&
-								(selectedKind !== 'MIGRATION' ||
-									!row.original.candidateState ||
-									row.original.candidateState === 'TESTING')
-							"
-							size="xs"
-							color="primary"
-							@click="publish(row.original.id)"
-							>{{ t('release.publish') }}</UButton
-						>
-					</div></template
-				><template #empty>{{ t('release.empty') }}</template></UTable
-			><ConsoleTablePagination
-				:page="page"
-				:page-size="pageSize"
-				:total="rows.length"
-				:page-count="pageCount"
-				@update:page="page = $event"
-				@update:page-size="pageSize = $event"
-			/>
+		<div class="relative isolate">
+			<Transition name="console-section" :duration="{ enter: 360, leave: 240 }">
+				<div
+					:key="selectedKind"
+					class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+				>
+					<UTable
+						:data="paginated"
+						:columns="columns"
+						:loading="status === 'pending'"
+						class="min-h-72 min-w-full"
+						><template #fromRelease-cell="{ row }"
+							><span class="">{{
+								row.original.fromRelease.version
+							}}</span></template
+						><template #toRelease-cell="{ row }"
+							><span class="">{{
+								row.original.toRelease.version
+							}}</span></template
+						><template #packageKey-cell="{ row }"
+							><span class="text-xs">{{
+								row.original.packageKey
+							}}</span></template
+						><template #version-cell="{ row }"
+							><span class="">{{ row.original.version }}</span></template
+						><template #commitSha-cell="{ row }"
+							><code class="text-xs">{{
+								row.original.manifest.commitSha || '—'
+							}}</code></template
+						><template #platform-cell="{ row }"
+							><code class="text-xs">{{
+								row.original.manifest.platform || '—'
+							}}</code></template
+						><template #publishedAt-cell="{ row }"
+							><span>{{
+								row.original.publishedAt
+									? formatDate(row.original.publishedAt)
+									: '—'
+							}}</span></template
+						><template #status-cell="{ row }"
+							><UBadge
+								:color="
+									(selectedKind === 'MIGRATION'
+										? migrationStatus(row.original)
+										: row.original.status) === 'PUBLISHED'
+										? 'success'
+										: (selectedKind === 'MIGRATION'
+													? migrationStatus(row.original)
+													: row.original.status) === 'TESTING' ||
+											  (selectedKind === 'MIGRATION'
+													? migrationStatus(row.original)
+													: row.original.status) === 'DRAFT'
+											? 'warning'
+											: 'neutral'
+								"
+								variant="subtle"
+								>{{
+									selectedKind === 'MIGRATION'
+										? t(`status.${migrationStatus(row.original)}`)
+										: t(`status.${row.original.status}`)
+								}}</UBadge
+							><span
+								v-if="
+									selectedKind === 'MIGRATION' &&
+									row.original.candidateState === 'TESTING'
+								"
+								class="ml-2 text-xs text-slate-500 dark:text-slate-400"
+								>r{{ row.original.candidateRevision }}</span
+							>
+							></template
+						><template #actions-cell="{ row }"
+							><div class="flex justify-end gap-2">
+								<UButton
+									v-if="selectedKind === 'CLIENT'"
+									size="xs"
+									color="neutral"
+									variant="soft"
+									@click="openClientEditor(row.original)"
+									>{{ t('release.editClient') }}</UButton
+								>
+								<UButton
+									v-if="
+										row.original.status === 'DRAFT' &&
+										(selectedKind !== 'MIGRATION' ||
+											!row.original.candidateState ||
+											row.original.candidateState === 'TESTING')
+									"
+									size="xs"
+									color="primary"
+									@click="publish(row.original.id)"
+									>{{ t('release.publish') }}</UButton
+								>
+							</div></template
+						><template #empty>{{ t('release.empty') }}</template></UTable
+					><ConsoleTablePagination
+						:page="page"
+						:page-size="pageSize"
+						:total="rows.length"
+						:page-count="pageCount"
+						@update:page="page = $event"
+						@update:page-size="pageSize = $event"
+					/>
+				</div>
+			</Transition>
 		</div>
 		<UModal v-model:open="open" :title="t('release.newDraft')"
 			><template #body
