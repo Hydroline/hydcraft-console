@@ -123,15 +123,6 @@ export const registerUpdaterArtifact = async (
 			where: { kind: 'UPDATER', version: artifact.version },
 			orderBy: { revision: 'desc' },
 		})
-		const publishedOtherCommit = revisions.find((candidate) => {
-			if (candidate.status !== 'PUBLISHED') return false
-			const manifest = manifestRecord(candidate.manifest)
-			return Boolean(
-				manifest?.commitSha && manifest.commitSha !== artifact.commitSha,
-			)
-		})
-		if (publishedOtherCommit)
-			throw createApiError(409, 'UPDATER_VERSION_ALREADY_PUBLISHED')
 		let revision = revisions.find((candidate) =>
 			updaterCandidateMatches(candidate, artifact.commitSha, artifact.platform),
 		)
