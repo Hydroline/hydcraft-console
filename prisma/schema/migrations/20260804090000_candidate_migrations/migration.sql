@@ -30,6 +30,6 @@ ALTER TABLE "ClientMigrationRevision"
   ADD CONSTRAINT "ClientMigrationRevision_migrationId_fkey"
   FOREIGN KEY ("migrationId") REFERENCES "ClientMigration"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-INSERT INTO "EntitlementDefinition" ("id", "key", "labels")
-VALUES ('client-test', 'client-test', '{"zh-CN":"客户端测试组","zh-TW":"客戶端測試組","en-US":"Client test group","ja-JP":"クライアントテストグループ"}')
+INSERT INTO "EntitlementDefinition" ("id", "key", "labels", "updatedAt")
+VALUES ('client-test', 'client-test', '{"zh-CN":"客户端测试组","zh-TW":"客戶端測試組","en-US":"Client test group","ja-JP":"クライアントテストグループ"}', CURRENT_TIMESTAMP)
 ON CONFLICT ("key") DO NOTHING;
