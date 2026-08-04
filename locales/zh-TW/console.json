@@ -106,7 +106,14 @@
 		"clearPublisher": "清空發包人",
 		"removeContributor": "移除貢獻者"
 	},
-	"status": { "DRAFT": "草稿", "PUBLISHED": "已發布", "ARCHIVED": "已封存" },
+	"status": {
+		"DRAFT": "草稿",
+		"PUBLISHED": "已發布",
+		"ARCHIVED": "已封存",
+		"UPLOADING": "上傳中",
+		"TESTING": "測試中",
+		"REVOKING": "撤回中"
+	},
 	"distribution": {
 		"defaultSource": "預設下載來源",
 		"eyebrow": "Distribution topology",

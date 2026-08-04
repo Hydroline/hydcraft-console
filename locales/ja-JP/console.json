@@ -109,7 +109,10 @@
 	"status": {
 		"DRAFT": "下書き",
 		"PUBLISHED": "公開済み",
-		"ARCHIVED": "アーカイブ"
+		"ARCHIVED": "アーカイブ",
+		"UPLOADING": "アップロード中",
+		"TESTING": "テスト中",
+		"REVOKING": "取り消し中"
 	},
 	"distribution": {
 		"defaultSource": "既定のダウンロード元",

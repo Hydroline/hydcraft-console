@@ -18,6 +18,12 @@ enum ClientReleaseStatus {
   ARCHIVED
 }
 
+enum CandidateMigrationState {
+  UPLOADING
+  TESTING
+  REVOKING
+}
+
 enum RevisionStatus {
   DRAFT
   PUBLISHED

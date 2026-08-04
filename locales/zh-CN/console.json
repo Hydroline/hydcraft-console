@@ -111,7 +111,14 @@
 		"clearPublisher": "清空发包人",
 		"removeContributor": "移除贡献者"
 	},
-	"status": { "DRAFT": "草稿", "PUBLISHED": "已发布", "ARCHIVED": "已归档" },
+	"status": {
+		"DRAFT": "草稿",
+		"PUBLISHED": "已发布",
+		"ARCHIVED": "已归档",
+		"UPLOADING": "上传中",
+		"TESTING": "测试中",
+		"REVOKING": "撤回中"
+	},
 	"distribution": {
 		"defaultSource": "默认下载源",
 		"eyebrow": "Distribution topology",

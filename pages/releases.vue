@@ -15,6 +15,8 @@ interface Migration {
 	id: string
 	packageKey: string
 	status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+	candidateState: 'UPLOADING' | 'TESTING' | 'REVOKING' | null
+	candidateRevision: number
 	fromRelease: { version: string }
 	toRelease: { version: string }
 }
@@ -120,6 +122,8 @@ const formatDate = (value: string): string =>
 		dateStyle: 'short',
 		timeStyle: 'short',
 	}).format(new Date(value))
+const migrationStatus = (migration: Migration) =>
+	migration.candidateState ?? migration.status
 watch(selectedKind, () => {
 	page.value = 1
 })
@@ -339,14 +343,33 @@ const saveClientEditorial = async () => {
 				><template #status-cell="{ row }"
 					><UBadge
 						:color="
-							row.original.status === 'PUBLISHED'
+							(selectedKind === 'MIGRATION'
+								? migrationStatus(row.original)
+								: row.original.status) === 'PUBLISHED'
 								? 'success'
-								: row.original.status === 'DRAFT'
+								: (selectedKind === 'MIGRATION'
+											? migrationStatus(row.original)
+											: row.original.status) === 'TESTING' ||
+									  (selectedKind === 'MIGRATION'
+											? migrationStatus(row.original)
+											: row.original.status) === 'DRAFT'
 									? 'warning'
 									: 'neutral'
 						"
 						variant="subtle"
-						>{{ t(`status.${row.original.status}`) }}</UBadge
+						>{{
+							selectedKind === 'MIGRATION'
+								? t(`status.${migrationStatus(row.original)}`)
+								: t(`status.${row.original.status}`)
+						}}</UBadge
+					><span
+						v-if="
+							selectedKind === 'MIGRATION' &&
+							row.original.candidateState === 'TESTING'
+						"
+						class="ml-2 text-xs text-slate-500 dark:text-slate-400"
+						>r{{ row.original.candidateRevision }}</span
+					>
 					></template
 				><template #actions-cell="{ row }"
 					><div class="flex justify-end gap-2">
@@ -359,7 +382,12 @@ const saveClientEditorial = async () => {
 							>{{ t('release.editClient') }}</UButton
 						>
 						<UButton
-							v-if="row.original.status === 'DRAFT'"
+							v-if="
+								row.original.status === 'DRAFT' &&
+								(selectedKind !== 'MIGRATION' ||
+									!row.original.candidateState ||
+									row.original.candidateState === 'TESTING')
+							"
 							size="xs"
 							color="primary"
 							@click="publish(row.original.id)"

@@ -1,5 +1,8 @@
 import { z } from 'zod'
-import { nextClientMigration } from '../../../utils/client-updates/service'
+import {
+	clientTestEntitlement,
+	nextClientMigration,
+} from '../../../utils/client-updates/service'
 import {
 	canUseProtectedSource,
 	optionalIdentity,
@@ -20,5 +23,6 @@ export default defineEventHandler(async (event) => {
 		input.currentVersion,
 		canUseProtectedSource(identity),
 		input.sourceKey,
+		Boolean(identity?.entitlements.includes(clientTestEntitlement)),
 	)
 })

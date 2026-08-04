@@ -108,7 +108,10 @@
 	"status": {
 		"DRAFT": "Draft",
 		"PUBLISHED": "Published",
-		"ARCHIVED": "Archived"
+		"ARCHIVED": "Archived",
+		"UPLOADING": "Uploading",
+		"TESTING": "Testing",
+		"REVOKING": "Revoking"
 	},
 	"distribution": {
 		"defaultSource": "Default download source",

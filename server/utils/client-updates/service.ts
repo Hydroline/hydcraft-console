@@ -10,6 +10,8 @@ import type {
 } from './contracts'
 import type { PortalDirectoryUser } from '../portal/directory'
 
+export const clientTestEntitlement = 'client-test'
+
 type LocalizedLabels = Record<string, unknown>
 
 export interface UpdaterVersion {
@@ -147,16 +149,27 @@ const fullPackageFromManifest = (
 	}
 }
 
-const nextMigrationRecord = async (currentVersion: string) => {
+const nextMigrationRecord = async (
+	currentVersion: string,
+	canUseTestCandidate = false,
+) => {
 	const fromRelease = await prisma.clientRelease.findFirst({
 		where: { version: currentVersion, status: 'PUBLISHED' },
 		orderBy: { publishedAt: 'desc' },
 	})
 	if (!fromRelease) return null
 	return prisma.clientMigration.findFirst({
-		where: { fromReleaseId: fromRelease.id, status: 'PUBLISHED' },
+		where: {
+			fromReleaseId: fromRelease.id,
+			OR: [
+				{ status: 'PUBLISHED' },
+				...(canUseTestCandidate
+					? [{ status: 'DRAFT', candidateState: 'TESTING' as const }]
+					: []),
+			],
+		},
 		include: { toRelease: true },
-		orderBy: { publishedAt: 'asc' },
+		orderBy: { updatedAt: 'asc' },
 	})
 }
 
@@ -247,13 +260,22 @@ export const resolveUpdaterSourceProbeTarget = async (
 	}
 }
 
-export const checkClientMigration = async (currentVersion: string) => {
-	const migration = await nextMigrationRecord(currentVersion)
+export const checkClientMigration = async (
+	currentVersion: string,
+	canUseTestCandidate = false,
+) => {
+	const migration = await nextMigrationRecord(
+		currentVersion,
+		canUseTestCandidate,
+	)
 	return {
 		currentVersion,
 		updateAvailable: Boolean(migration),
 		toVersion: migration?.toRelease.version ?? currentVersion,
 		migrationId: migration?.id ?? null,
+		...(migration?.candidateState === 'TESTING'
+			? { testRevision: migration.candidateRevision }
+			: {}),
 	}
 }
 
@@ -364,6 +386,7 @@ const resolvePackageSources = async (
 	packageKey: string,
 	canUseProtectedSource: boolean,
 	sourceKey?: string,
+	protectedOnly = false,
 ) => {
 	const sources = await prisma.distributionSource.findMany({
 		where: { enabled: true, scope: 'CLIENT' },
@@ -381,10 +404,17 @@ const resolvePackageSources = async (
 			? canUseProtectedSource
 				? [resolveDeliveryUrl(source.baseUrl, packageKey, source.policy)]
 				: []
-			: [`${source.baseUrl.replace(/\/$/, '')}/${packageKey}`],
+			: protectedOnly
+				? []
+				: [`${source.baseUrl.replace(/\/$/, '')}/${packageKey}`],
 	)
 	if (!packageUrls.length)
-		throw createApiError(401, 'PROTECTED_SOURCE_AUTHENTICATION_REQUIRED')
+		throw createApiError(
+			protectedOnly ? 503 : 401,
+			protectedOnly
+				? 'CANDIDATE_PRIVATE_SOURCE_UNAVAILABLE'
+				: 'PROTECTED_SOURCE_AUTHENTICATION_REQUIRED',
+		)
 	return packageUrls
 }
 
@@ -457,6 +487,16 @@ export const createClientMigration = async (
 			toVersion: _toVersion,
 			...migrationInput
 		} = input
+		const existingMigration = await tx.clientMigration.findUnique({
+			where: {
+				fromReleaseId_toReleaseId: {
+					fromReleaseId: fromRelease.id,
+					toReleaseId: toRelease.id,
+				},
+			},
+		})
+		if (existingMigration?.status === 'PUBLISHED')
+			throw createApiError(409, 'CLIENT_MIGRATION_IMMUTABLE')
 		const migration = await tx.clientMigration.upsert({
 			where: {
 				fromReleaseId_toReleaseId: {
@@ -480,6 +520,8 @@ export const createClientMigration = async (
 				plan: input.plan,
 				anchors: input.anchors,
 				status: 'DRAFT',
+				candidateState: null,
+				candidateEntitlement: null,
 				createdById: actorId,
 			},
 		})
@@ -491,17 +533,192 @@ export const createClientMigration = async (
 		return migration
 	})
 
+const candidateMigration = async (
+	tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+	fromVersion: string,
+	toVersion: string,
+) => {
+	const migration = await tx.clientMigration.findFirst({
+		where: {
+			fromRelease: { version: fromVersion },
+			toRelease: { version: toVersion },
+		},
+	})
+	if (!migration) throw createApiError(404, 'CANDIDATE_MIGRATION_NOT_FOUND')
+	if (migration.status === 'PUBLISHED')
+		throw createApiError(409, 'CANDIDATE_ALREADY_PUBLISHED')
+	return migration
+}
+
+export const prepareClientMigrationCandidate = async (
+	input: ClientMigrationInput,
+	actorId?: string,
+) => {
+	return prisma.$transaction(async (tx) => {
+		const [fromRelease, toRelease] = await Promise.all([
+			tx.clientRelease.findUnique({ where: { version: input.fromVersion } }),
+			tx.clientRelease.findUnique({ where: { version: input.toVersion } }),
+		])
+		if (!fromRelease || !toRelease)
+			throw createApiError(400, 'MIGRATION_RELEASE_NOT_FOUND')
+		const existing = await tx.clientMigration.findUnique({
+			where: {
+				fromReleaseId_toReleaseId: {
+					fromReleaseId: fromRelease.id,
+					toReleaseId: toRelease.id,
+				},
+			},
+		})
+		if (existing?.status === 'PUBLISHED')
+			throw createApiError(409, 'CANDIDATE_ALREADY_PUBLISHED')
+		const prepared = existing
+			? await tx.clientMigration.update({
+					where: { id: existing.id },
+					data: {
+						candidateState: 'UPLOADING',
+						candidateEntitlement: clientTestEntitlement,
+					},
+				})
+			: await tx.clientMigration.create({
+					data: {
+						id: randomUUID(),
+						fromReleaseId: fromRelease.id,
+						toReleaseId: toRelease.id,
+						packageKey: input.packageKey,
+						packageSha256: input.packageSha256,
+						packageSize: BigInt(input.packageSize),
+						signature: input.signature,
+						plan: input.plan,
+						anchors: input.anchors,
+						candidateState: 'UPLOADING',
+						candidateEntitlement: clientTestEntitlement,
+						createdById: actorId,
+					},
+				})
+		await enqueuePostCommitEvent(tx, 'audit.log', {
+			action: 'UPDATED',
+			resource: 'client-migration-candidate',
+			resourceId: prepared.id,
+			actorId,
+			payload: { state: 'UPLOADING' },
+		})
+		return prepared
+	})
+}
+
+export const completeClientMigrationCandidate = async (
+	input: ClientMigrationInput,
+	actorId?: string,
+) =>
+	prisma.$transaction(async (tx) => {
+		const migration = await candidateMigration(
+			tx,
+			input.fromVersion,
+			input.toVersion,
+		)
+		if (migration.candidateState !== 'UPLOADING')
+			throw createApiError(409, 'CANDIDATE_NOT_UPLOADING')
+		const revision = migration.candidateRevision + 1
+		const updated = await tx.clientMigration.update({
+			where: { id: migration.id },
+			data: {
+				packageKey: input.packageKey,
+				packageSha256: input.packageSha256,
+				packageSize: BigInt(input.packageSize),
+				signature: input.signature,
+				plan: input.plan,
+				anchors: input.anchors,
+				candidateState: 'TESTING',
+				candidateRevision: revision,
+				candidateEntitlement: clientTestEntitlement,
+			},
+		})
+		await tx.clientMigrationRevision.create({
+			data: {
+				migrationId: migration.id,
+				revision,
+				packageKey: input.packageKey,
+				packageSha256: input.packageSha256,
+				packageSize: BigInt(input.packageSize),
+				signature: input.signature,
+				plan: input.plan,
+				anchors: input.anchors,
+			},
+		})
+		await enqueuePostCommitEvent(tx, 'audit.log', {
+			action: 'UPDATED',
+			resource: 'client-migration-candidate',
+			resourceId: updated.id,
+			actorId,
+			payload: { state: 'TESTING', revision },
+		})
+		return updated
+	})
+
+export const prepareClientMigrationCandidateRevocation = async (
+	fromVersion: string,
+	toVersion: string,
+	_actorId?: string,
+) =>
+	prisma.$transaction(async (tx) => {
+		const migration = await candidateMigration(tx, fromVersion, toVersion)
+		if (!migration.candidateState)
+			throw createApiError(409, 'CANDIDATE_NOT_ACTIVE')
+		return tx.clientMigration.update({
+			where: { id: migration.id },
+			data: { candidateState: 'REVOKING' },
+		})
+	})
+
+export const completeClientMigrationCandidateRevocation = async (
+	fromVersion: string,
+	toVersion: string,
+	actorId?: string,
+) =>
+	prisma.$transaction(async (tx) => {
+		const migration = await candidateMigration(tx, fromVersion, toVersion)
+		if (migration.candidateState !== 'REVOKING')
+			throw createApiError(409, 'CANDIDATE_NOT_REVOKING')
+		const targetId = migration.toReleaseId
+		await tx.clientMigration.delete({ where: { id: migration.id } })
+		const remaining = await tx.clientMigration.count({
+			where: { OR: [{ fromReleaseId: targetId }, { toReleaseId: targetId }] },
+		})
+		const target = await tx.clientRelease.findUnique({
+			where: { id: targetId },
+		})
+		if (target?.status === 'DRAFT' && remaining === 0)
+			await tx.clientRelease.delete({ where: { id: targetId } })
+		await enqueuePostCommitEvent(tx, 'audit.log', {
+			action: 'REVOKED',
+			resource: 'client-migration-candidate',
+			resourceId: migration.id,
+			actorId,
+		})
+		return { id: migration.id }
+	})
+
 export const publishClientMigration = async (id: string, actorId: string) =>
 	prisma.$transaction(async (tx) => {
 		const migration = await tx.clientMigration.findUnique({ where: { id } })
 		if (!migration) throw createApiError(404, 'MIGRATION_NOT_FOUND')
+		if (
+			migration.candidateState === 'UPLOADING' ||
+			migration.candidateState === 'REVOKING'
+		)
+			throw createApiError(409, 'CANDIDATE_NOT_READY_TO_PUBLISH')
 		await tx.clientRelease.updateMany({
 			where: { id: { in: [migration.fromReleaseId, migration.toReleaseId] } },
 			data: { status: 'PUBLISHED', publishedAt: new Date() },
 		})
 		const published = await tx.clientMigration.update({
 			where: { id },
-			data: { status: 'PUBLISHED', publishedAt: new Date() },
+			data: {
+				status: 'PUBLISHED',
+				publishedAt: new Date(),
+				candidateState: null,
+				candidateEntitlement: null,
+			},
 		})
 		await enqueuePostCommitEvent(tx, 'migration.published', {
 			resourceId: id,
@@ -514,13 +731,19 @@ export const nextClientMigration = async (
 	currentVersion: string,
 	canUseProtectedSource: boolean,
 	sourceKey?: string,
+	canUseTestCandidate = false,
 ) => {
-	const migration = await nextMigrationRecord(currentVersion)
+	const migration = await nextMigrationRecord(
+		currentVersion,
+		canUseTestCandidate,
+	)
 	if (!migration) return null
+	const isTestCandidate = migration.candidateState === 'TESTING'
 	const packageUrls = await resolvePackageSources(
 		migration.packageKey,
-		canUseProtectedSource,
+		isTestCandidate ? canUseTestCandidate : canUseProtectedSource,
 		sourceKey,
+		isTestCandidate,
 	)
 	return {
 		migrationId: migration.id,
@@ -533,5 +756,8 @@ export const nextClientMigration = async (
 		signature: migration.signature,
 		plan: withMigrationAnchors(migration.plan, migration.anchors),
 		anchors: migration.anchors,
+		...(isTestCandidate
+			? { testRevision: migration.candidateRevision, channel: 'test' as const }
+			: { channel: 'stable' as const }),
 	}
 }

@@ -105,13 +105,35 @@ model ClientMigration {
   plan           Json
   anchors        Json
   status         ClientReleaseStatus @default(DRAFT)
+  candidateState CandidateMigrationState?
+  candidateRevision Int              @default(0)
+  candidateEntitlement String?
   createdById    String?
   publishedAt    DateTime?
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
   fromRelease    ClientRelease       @relation("MigrationSource", fields: [fromReleaseId], references: [id], onDelete: Restrict)
   toRelease      ClientRelease       @relation("MigrationTarget", fields: [toReleaseId], references: [id], onDelete: Restrict)
+  candidateRevisions ClientMigrationRevision[]
 
   @@unique([fromReleaseId, toReleaseId])
   @@index([status, fromReleaseId, publishedAt])
+  @@index([candidateState, fromReleaseId])
+}
+
+model ClientMigrationRevision {
+  id            String          @id @default(cuid())
+  migrationId   String
+  revision      Int
+  packageKey    String
+  packageSha256 String
+  packageSize   BigInt
+  signature     String
+  plan          Json
+  anchors       Json
+  createdAt     DateTime        @default(now())
+  migration     ClientMigration @relation(fields: [migrationId], references: [id], onDelete: Cascade)
+
+  @@unique([migrationId, revision])
+  @@index([migrationId, createdAt])
 }
