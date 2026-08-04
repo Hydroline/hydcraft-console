@@ -75,6 +75,11 @@ const selectUser = (user: DirectoryUser): void => {
 	selected.value = user
 	selectedKeys.value = []
 }
+const setEntitlementGranted = (key: string, granted: boolean): void => {
+	selectedKeys.value = granted
+		? [...new Set([...selectedKeys.value, key])]
+		: selectedKeys.value.filter((item) => item !== key)
+}
 const save = async () => {
 	if (!selected.value) return
 	try {
@@ -203,9 +208,12 @@ const save = async () => {
 				</template>
 				<template #actions-cell="{ row }">
 					<UCheckbox
-						v-model="selectedKeys"
+						:model-value="selectedKeys.includes(row.original.key)"
 						:value="row.original.key"
 						:label="t('access.grant')"
+						@update:model-value="
+							setEntitlementGranted(row.original.key, $event === true)
+						"
 					/>
 				</template>
 				<template #empty>{{ t('access.selectUser') }}</template>
