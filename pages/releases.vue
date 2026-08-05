@@ -74,6 +74,13 @@ const editingClientRelease = ref<ClientRelease | null>(null)
 const advanced = ref(false)
 const version = ref('')
 const rawManifest = ref('{\n  "schemaVersion": 1\n}')
+const updaterPlatform = ref<'windows-x86_64' | 'macos-universal'>(
+	'windows-x86_64',
+)
+const updaterCommitSha = ref('')
+const updaterArtifactUrl = ref('')
+const updaterSha256 = ref('')
+const updaterSize = ref('')
 const clientChangelog = ref('')
 const publisherHydrolineId = ref<string | null>(null)
 const contributorHydrolineIds = ref<string[]>([])
@@ -149,21 +156,38 @@ const selectSection = async (section: ReleaseSection): Promise<void> => {
 }
 const create = async () => {
 	try {
+		if (!advanced.value && !updaterCommitSha.value.trim())
+			throw new Error('UPDATER_COMMIT_REQUIRED')
+		const parsedSize = updaterSize.value.trim()
+			? Number(updaterSize.value.trim())
+			: undefined
+		if (
+			parsedSize !== undefined &&
+			(!Number.isSafeInteger(parsedSize) || parsedSize < 0)
+		)
+			throw new Error('UPDATER_ARTIFACT_SIZE_INVALID')
 		const manifest = advanced.value
 			? JSON.parse(rawManifest.value)
 			: {
 					schemaVersion: 1,
-					version: version.value,
-					platform: 'windows-x86_64',
-					urls: [],
-					sha256: '',
+					version: version.value.trim(),
+					platform: updaterPlatform.value,
+					urls: [updaterArtifactUrl.value.trim()],
+					sha256: updaterSha256.value.trim(),
+					commitSha: updaterCommitSha.value.trim(),
+					...(parsedSize === undefined ? {} : { size: parsedSize }),
 				}
 		await $fetch('/api/admin/releases', {
 			method: 'POST',
-			body: { kind: 'UPDATER', version: version.value, manifest },
+			body: { kind: 'UPDATER', version: version.value.trim(), manifest },
 		})
 		toast.add({ title: t('release.draftCreated'), color: 'success' })
 		open.value = false
+		version.value = ''
+		updaterCommitSha.value = ''
+		updaterArtifactUrl.value = ''
+		updaterSha256.value = ''
+		updaterSize.value = ''
 		await refreshReleases()
 	} catch {
 		toast.add({ title: t('errors.invalidManifest'), color: 'error' })
@@ -448,11 +472,43 @@ const saveClientEditorial = async () => {
 					><UCheckbox
 						v-model="advanced"
 						:label="t('release.advancedJson')"
-					/><UFormField v-if="advanced" :label="t('release.manifestJson')"
+					/><template v-if="!advanced">
+						<UFormField :label="t('release.platform')">
+							<USelect
+								v-model="updaterPlatform"
+								:items="[
+									{ label: t('release.windows'), value: 'windows-x86_64' },
+									{ label: t('release.macos'), value: 'macos-universal' },
+								]"
+								class="w-full"
+							/>
+						</UFormField>
+						<UFormField :label="t('release.commit')"
+							><UInput v-model="updaterCommitSha" class="w-full"
+						/></UFormField>
+						<UFormField :label="t('release.artifactUrl')"
+							><UInput v-model="updaterArtifactUrl" class="w-full"
+						/></UFormField>
+						<UFormField :label="t('release.sha256')"
+							><UInput v-model="updaterSha256" class="w-full"
+						/></UFormField>
+						<UFormField :label="t('release.artifactSize')">
+							<UInput
+								v-model="updaterSize"
+								type="number"
+								min="0"
+								class="w-full"
+							/>
+						</UFormField> </template
+					><UFormField v-if="advanced" :label="t('release.manifestJson')"
 						><UTextarea v-model="rawManifest" :rows="12" class="w-full"
 					/></UFormField>
 					<p class="text-sm text-slate-500 dark:text-slate-400">
-						{{ t('release.updaterDraftHint') }}
+						{{
+							advanced
+								? t('release.updaterDraftHint')
+								: t('release.manualUpdaterHint')
+						}}
 					</p>
 					<div class="flex justify-end gap-2">
 						<UButton color="neutral" variant="ghost" @click="open = false">{{
